@@ -7,7 +7,7 @@ import { user_status } from "../src/db/schema/user_status.js";
 
 export const isUserLoggedIn = async (req, res, next) => {
   try {
-    const token = req.cookies?.token || req.headers.authorization?.split(" ")[1];
+    const token = req.cookies?.token_ux || req.headers.authorization?.split(" ")[1];
 
     if (!token || token === "") {
       return res.status(401).json({ success: false, message: "Login required" });

@@ -84,10 +84,6 @@ export const registerEmployee = async (req, res) => {
   }
 };
 
-
-
-
-
 export const loginEmployee = async function(req,res){
 
     try{
@@ -134,8 +130,6 @@ export const loginEmployee = async function(req,res){
         res.status(500).json({success:false,message:`${err}`});
     }
 };
-
-
 
 export const logoutEmployee = async function(req,res){
 
