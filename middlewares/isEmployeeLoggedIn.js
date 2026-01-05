@@ -7,29 +7,26 @@ import { user_status } from "../src/db/schema/user_status.js";
 
 export const isEmployeeLoggedIn = async (req, res, next) => {
   try {
-    // 1️⃣ Token
     const token =
-      req.cookies?.token ||
+      req.cookies?.token_ex ||
       req.headers.authorization?.split(" ")[1];
 
     if (!token) {
       return res.status(401).json({
         success: false,
-        message: "Login required",
+        message: "Employee login required",
       });
     }
 
-    // 2️⃣ Verify token
     const decoded = jwt.verify(token, process.env.JWT_KEY);
 
-    // 3️⃣ Fetch employee with role & status
-    const employee = await db
+    const users = await db
       .select({
-        user_id: userTable.id,
+        id: userTable.id,
         username: userTable.username,
         email: userTable.email,
-        role: rolesTable.role_name,
-        status: user_status.status_name,
+        role_name: rolesTable.name,
+        status_name: user_status.name,
       })
       .from(userTable)
       .innerJoin(rolesTable, eq(userTable.role_id, rolesTable.id))
@@ -37,37 +34,35 @@ export const isEmployeeLoggedIn = async (req, res, next) => {
       .where(eq(userTable.id, decoded.id))
       .limit(1);
 
-    // 4️⃣ Employee exists?
-    if (employee.length === 0) {
+    if (!users.length) {
       return res.status(401).json({
         success: false,
         message: "Employee not found",
       });
     }
 
-    // 5️⃣ Status check
-    if (employee[0].status !== "active") {
-      return res.status(403).json({
-        success: false,
-        message: "Account inactive",
-      });
-    }
+    const employee = users[0];
 
-    // 6️⃣ ROLE CHECK
-    if (employee[0].role !== "employee") {
+    if (employee.role_name !== "employee") {
       return res.status(403).json({
         success: false,
         message: "Employee access only",
       });
     }
 
-    // 7️⃣ Attach employee to request
-    req.employee = employee[0];
+    if (employee.status_name !== "active") {
+      return res.status(403).json({
+        success: false,
+        message: "Account inactive",
+      });
+    }
+
+    req.employee = employee;
     next();
-  } catch (error) {
+  } catch (err) {
     return res.status(401).json({
       success: false,
-      message: "Invalid or expired token",
+      message: "Invalid or expired employee token",
     });
   }
 };

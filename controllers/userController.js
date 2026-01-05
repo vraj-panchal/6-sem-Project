@@ -192,7 +192,7 @@ export const loginUser = async (req, res) => {
 
 // ================= LOGOUT =================
 export const logoutUser = async (req, res) => {
-  res.cookie("token", "", {
+  res.cookie("token_ux", "", {
     httpOnly: true,
     expires: new Date(0),
     sameSite: "strict",

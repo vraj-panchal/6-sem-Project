@@ -150,7 +150,7 @@ export const loginAdmin = async (req, res) => {
 // --------------------- LOGOUT ADMIN ---------------------
 export const logoutAdmin = async (req, res) => {
   try {
-    res.cookie("token", "", {
+    res.cookie("token_ax", "", {
       httpOnly: true,
       expires: new Date(0),
       sameSite: "strict",

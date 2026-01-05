@@ -61,26 +61,3 @@ app.listen(PORT, () => {
 
 export default app;
 
-
-// import express from "express";
-// import dotenv from "dotenv";
-// import cookieParser from "cookie-parser";
-
-// import adminRoutes from "./routes/adminRouter.js";
-// import employeeRoutes from "./routes/employeeRouter.js";
-// import userRoutes from "./routes/userRouter.js";
-
-// dotenv.config();
-// const app = express();
-
-// app.use(express.json());
-// app.use(express.urlencoded({ extended: true }));
-// app.use(cookieParser());
-
-// app.use("/auth/api/admin", adminRoutes);
-// app.use("/auth/api/employee", employeeRoutes);
-// app.use("/auth/api/user", userRoutes);
-
-// app.listen(5000, () => {
-//   console.log(" Server running on http://localhost:5000");
-// });

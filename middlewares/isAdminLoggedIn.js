@@ -9,13 +9,13 @@ export const isAdminLoggedIn = async (req, res, next) => {
   try {
     // 1️⃣ Token
     const token =
-      req.cookies?.token ||
+      req.cookies?.token_ax ||
       req.headers.authorization?.split(" ")[1];
 
     if (!token) {
       return res.status(401).json({
         success: false,
-        message: "Login required",
+        message: "Admin Login required",
       });
     }
 
@@ -44,7 +44,7 @@ export const isAdminLoggedIn = async (req, res, next) => {
     if (users.length === 0) {
       return res.status(401).json({
         success: false,
-        message: "User not found",
+        message: "Admin not found",
       });
     }
 
