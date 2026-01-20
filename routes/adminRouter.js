@@ -91,7 +91,7 @@ router.delete("/categories/delete/:id", isAdminLoggedIn,deleteCategory);
 router.get("/products",isAdminLoggedIn,listProducts);
 
 // Add Product
-router.post("/products/add", isAdminLoggedIn,productImageUpload.single("product_images"),addProduct);
+router.post("/products/add", isAdminLoggedIn,productImageUpload.single("imageUrl"),addProduct);
 
 // Update Product
 router.put("/products/update/:id", isAdminLoggedIn,productImageUpload.single("product_images"),updateProduct);
