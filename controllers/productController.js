@@ -5,7 +5,7 @@ import { categoriesTable } from "../src/db/schema/categories.js";
 import { createProductSchema, updateProductSchema } from "../validations/productValidator.js";
 
 
-//1️⃣ List Products
+// List Products
 export const listProducts = async (req, res) => {
     try {
         const products = await db.select().from(productsTable);
@@ -30,7 +30,7 @@ export const listProducts = async (req, res) => {
                 return res.status(404).json({
                     success: false,
                     message: "No products",
-                });
+                }); 
             }
 
             return res.status(200).json({
@@ -53,7 +53,7 @@ export const listProducts = async (req, res) => {
     }
 };
 
-//2️⃣ Add Product
+// Add Product
 export const addProduct = async (req, res) => {
     try {
         const result = createProductSchema.safeParse(req.body);
@@ -147,7 +147,7 @@ export const addProduct = async (req, res) => {
 };
 
 
-//3️⃣ Update Product
+// Update Product
 export const updateProduct = async (req, res) => {
     try {
         const { id } = req.params;
@@ -161,7 +161,7 @@ export const updateProduct = async (req, res) => {
 
         const updatedFields = { ...result.data };
 
-        // 2️⃣ Add imageUrl if file is uploaded
+        // Add imageUrl if file is uploaded
         if (req.file) {
             updatedFields.imageUrl = req.file.path;
         }
@@ -256,7 +256,7 @@ export const updateProduct = async (req, res) => {
     }
 };
 
-//4️⃣ Delete Product
+//  Delete Product
 export const deleteProduct = async (req, res) => {
     try {
         const { id } = req.params;

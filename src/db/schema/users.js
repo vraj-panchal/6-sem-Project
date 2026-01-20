@@ -7,11 +7,11 @@ export const userTable = pgTable("users", {
   username: varchar({ length: 255 }).notNull().unique(),
   profile_image: varchar({ length: 500 }).default(null),
   email: varchar({ length: 255 }).notNull().unique(),
-  phonenumber: varchar({ length: 20 }).unique(),
+  phonenumber: varchar({ length: 20 }),
   password: varchar({ length: 255 }).notNull(),
   role_id: integer().references(() => rolesTable.id).notNull(),
   status_id: integer().references(() => user_status.id).notNull(),
 
-  created_at: timestamp().defaultNow().notNull(),   // ✅ OK
-  updated_at: timestamp().defaultNow().notNull(),   // ✅ REMOVE onUpdateNow()
+  created_at: timestamp().defaultNow().notNull(),   //  OK
+  updated_at: timestamp().defaultNow().notNull(),   //  REMOVE onUpdateNow()
 });

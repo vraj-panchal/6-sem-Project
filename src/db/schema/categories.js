@@ -17,3 +17,6 @@ export const categoriesTable = pgTable("categories", {
     .defaultNow(),
 });
 
+
+
+

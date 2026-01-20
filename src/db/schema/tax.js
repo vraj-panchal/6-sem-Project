@@ -1,4 +1,4 @@
-import { pgTable, integer,serial, bigint, numeric, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
+import { pgTable, integer,serial, numeric, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
 
 import { categoriesTable } from "./categories.js";
 
@@ -9,7 +9,7 @@ export const taxTable = pgTable("taxes", {
     categoryId: integer("category_id", { mode: "number" })
         .notNull()
         .references(() => categoriesTable.id, {
-            onDelete: "restrict",
+            onDelete: "restrict", // What is use ?? 
             onUpdate: "cascade",
         }),
 

@@ -11,7 +11,7 @@ import {
 import { generateToken } from "../utils/generateTokens.js";
 
 // ================= REGISTER EMPLOYEE (ADMIN ONLY) =================
-// ❌ NO JWT HERE
+//  NO JWT HERE
 export const registerEmployee = async (req, res) => {
   try {
     const result = employeeRegistrationSchema.safeParse(req.body);
@@ -67,7 +67,7 @@ export const registerEmployee = async (req, res) => {
       });
     }
 
-    // 🔐 bcrypt FLOW (UNCHANGED)
+    //  bcrypt FLOW (UNCHANGED)
     bcrypt.genSalt(10, function (err, salt) {
       if (err) {
         return res.status(500).json({ success: false, message: err.message });
@@ -151,10 +151,10 @@ export const loginEmployee = async (req, res) => {
       });
     }
 
-    // ✅ JWT TOKEN
+    //  JWT TOKEN
     const token_ex = generateToken(emp);
 
-    // ✅ COOKIE
+    //  COOKIE
     res.cookie("token_ex", token_ex, {
       httpOnly: true,
       maxAge: 10 * 24 * 60 * 60 * 1000,

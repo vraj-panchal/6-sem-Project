@@ -5,4 +5,4 @@ dotenv.config();
 
 const db = drizzle(process.env.DATABASE_URL);
  
-export { db }; // ✅ named export
+export { db }; // named export

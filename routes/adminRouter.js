@@ -53,52 +53,50 @@ router.get("/profile", isAdminLoggedIn, (req, res) => {
   });
 });
 
-//------------------------------------------------------------
-//🟫Manage Tax
-//------------------------------------------------------------
-//1️⃣ List Taxes
+// Manage Tax
+
+// List Taxes
 router.get("/taxes", isAdminLoggedIn,listTaxes);
 
-//2️⃣ Add Tax
+// Add Tax
 router.post("/taxes/add", isAdminLoggedIn,addTax);
 
-//3️⃣ Update Tax
+// Update Tax
 router.put("/taxes/update/:id", isAdminLoggedIn,updateTax);
 
-//4️⃣ Delete Tax
+// Delete Tax
 router.delete("/taxes/delete/:id", isAdminLoggedIn,deleteTax);
 
 
 
-//----------------------------------------------------------------
-//🟩 Manage Categories
-//----------------------------------------------------------------
-//1️⃣list of categories
+// Manage Categories
+
+// list of categories
 router.get("/categories", isAdminLoggedIn,listCategories);
 
-//2️⃣add category
+// add category
 router.post("/categories/add", isAdminLoggedIn,addCategory);
 
-//3️⃣update category
+// update category
 router.put("/categories/update/:id", isAdminLoggedIn,updateCategory);
 
-//4️⃣delete category
+// delete category
 router.delete("/categories/delete/:id", isAdminLoggedIn,deleteCategory);
 
 
 //------------------------------------------------------------
-//🟥 Manage Products
+// Manage Products
 //------------------------------------------------------------
-//1️⃣ List Products
+// List Products
 router.get("/products",isAdminLoggedIn,listProducts);
 
-//2️⃣ Add Product
+// Add Product
 router.post("/products/add", isAdminLoggedIn,productImageUpload.single("product_images"),addProduct);
 
-//3️⃣ Update Product
+// Update Product
 router.put("/products/update/:id", isAdminLoggedIn,productImageUpload.single("product_images"),updateProduct);
 
-//4️⃣ Delete Product
+// Delete Product
 router.delete("/products/delete/:id", isAdminLoggedIn,deleteProduct);
 
 

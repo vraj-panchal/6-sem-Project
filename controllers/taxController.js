@@ -4,7 +4,7 @@ import { taxTable } from "../src/db/schema/tax.js";
 import { categoriesTable } from "../src/db/schema/categories.js";
 import { createTaxSchema, updateTaxSchema } from "../validations/taxValidator.js";
 
-//1️⃣ List Taxes
+// List Taxes
 export const listTaxes = async (req, res) => {
   try {
     const taxes = await db.select().from(taxTable);
@@ -29,7 +29,7 @@ export const listTaxes = async (req, res) => {
   }
 };
 
-//2️⃣ Add Tax
+//  Add Tax
 export const addTax = async (req, res) => {
   try {
     const result = createTaxSchema.safeParse(req.body);
@@ -93,7 +93,7 @@ export const addTax = async (req, res) => {
   }
 };
 
-//3️⃣ Update Tax
+//  Update Tax
 export const updateTax = async (req, res) => {
   try {
     const result = updateTaxSchema.safeParse(req.body);
@@ -151,7 +151,7 @@ export const updateTax = async (req, res) => {
   }
 };
 
-//4️⃣ Delete Tax
+// Delete Tax
 export const deleteTax = async (req, res) => {
   try {
     const { id } = req.params;

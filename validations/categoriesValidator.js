@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-//1️⃣ Create Category Validation Schema
+// Create Category Validation Schema
 export const createCategorySchema = z.object({
   name: z
     .string()
@@ -13,5 +13,5 @@ export const createCategorySchema = z.object({
     .optional(),
 });
 
-//2️⃣ Update Category Validation Schema
+// Update Category Validation Schema
 export const updateCategorySchema = createCategorySchema.partial();

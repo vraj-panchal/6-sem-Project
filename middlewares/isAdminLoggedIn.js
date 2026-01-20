@@ -7,7 +7,7 @@ import { user_status } from "../src/db/schema/user_status.js";
 
 export const isAdminLoggedIn = async (req, res, next) => {
   try {
-    // 1️⃣ Token
+    //  Token
     const token =
       req.cookies?.token_ax ||
       req.headers.authorization?.split(" ")[1];
@@ -51,7 +51,7 @@ export const isAdminLoggedIn = async (req, res, next) => {
     const user = users[0];
     
 
-    // 4️⃣ Status check
+    // Status check
     if (user.status_name !== "active") {
       return res.status(403).json({
         success: false,
@@ -59,7 +59,7 @@ export const isAdminLoggedIn = async (req, res, next) => {
       });
     }
 
-    // 5️⃣ ROLE CHECK (MAIN)
+    //  ROLE CHECK (MAIN)
     if (user.role_name !== "admin"){
       return res.status(403).json({
         success: false,
