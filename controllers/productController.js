@@ -22,6 +22,7 @@ export const listProducts = async (req, res) => {
                 categoryName: categoriesTable.name,
                 taxPercent: taxTable.taxPercent,
             })
+            
             .from(productsTable)
             .leftJoin(
                 categoriesTable,
