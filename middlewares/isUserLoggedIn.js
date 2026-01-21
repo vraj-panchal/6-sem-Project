@@ -49,3 +49,24 @@ export const isUserLoggedIn = async (req, res, next) => {
     return res.status(500).json({ success: false, message: "Something went wrong" });
   }
 };
+
+
+
+export const optionalAuth = (req, res, next) => {
+  const token =
+    req.cookies?.token_ux || req.headers.authorization?.split(" ")[1];
+
+  if (!token) {
+    req.user = null;
+    return next();
+  }
+
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_KEY);
+    req.user = decoded; // only id/email/role if token has it
+    next();
+  } catch {
+    req.user = null;
+    next();
+  }
+};

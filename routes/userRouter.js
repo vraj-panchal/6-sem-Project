@@ -2,9 +2,10 @@ import express from "express";
 import multer from "multer";
 import dotenv from "dotenv";
 import { registerUser, loginUser, logoutUser } from "../controllers/userController.js";
-import { isUserLoggedIn } from "../middlewares/isUserLoggedIn.js";
+import { isUserLoggedIn ,optionalAuth } from "../middlewares/isUserLoggedIn.js";
 import { userImageUpload } from "../middlewares/upload.js";
 import { listProducts } from "../controllers/productController.js";
+
 
 dotenv.config();
 
@@ -40,6 +41,6 @@ router.get("/profile", isUserLoggedIn, (req, res) => {
   });
 });
 
-router.get("/products",isUserLoggedIn,listProducts);
+router.get("/products",optionalAuth,listProducts);
 
 export default router;

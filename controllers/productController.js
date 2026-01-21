@@ -1,49 +1,84 @@
-import { eq, and, ne } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { db } from "../config/db.js";
 import { productsTable } from "../src/db/schema/product.js";
 import { categoriesTable } from "../src/db/schema/categories.js";
 import { createProductSchema, updateProductSchema } from "../validations/productValidator.js";
+import { taxTable } from "../src/db/schema/tax.js";
+import { success } from "zod";
 
 
 // List Products
 export const listProducts = async (req, res) => {
     try {
-        const products = await db.select().from(productsTable);
-
-        if (!products.length) {
-            return res.status(404).json({
-                success: false,
-                message: "No products found",
-            });
-        }
-
-        if (req.user.role_name == "user") {
-            const productsforuser = await db.select({
+        // base query
+        let query = db
+            .select({
                 name: productsTable.name,
                 price: productsTable.price,
                 discountPercent: productsTable.discountPercent,
                 imageUrl: productsTable.imageUrl,
                 description: productsTable.description,
-            }).from(productsTable).where(eq(productsTable.isActive, true));
+                isActive: productsTable.isActive,
+                categoryName: categoriesTable.name,
+                taxPercent: taxTable.taxPercent,
+            })
+            .from(productsTable)
+            .leftJoin(
+                categoriesTable,
+                eq(productsTable.categoryId, categoriesTable.id)
+            )
+            .leftJoin(
+                taxTable,
+                eq(productsTable.categoryId, taxTable.categoryId)
+            );
 
-            if (!productsforuser.length) {
-                return res.status(404).json({
-                    success: false,
-                    message: "No products",
-                }); 
-            }
+        // role-based filter
+        if (!req.user || req.user.role_id === 2) {
+            query = query.where(eq(productsTable.isActive, true));
+        }
 
-            return res.status(200).json({
-                success: true,
-                data: productsforuser,
+        //  execute query
+        const products = await query;
+
+        // check result
+        if (!products.length) {
+            return res.status(404).json({
+                success: false,
+                message: "No Product Found",
             });
         }
 
+        //  price calculation
+        const finalProducts = products.map((p) => {
+            const price = Number(p.price);
+            const discountPercent = Number(p.discountPercent || 0);
+            const taxPercent = Number(p.taxPercent || 0);
+
+            const discountAmount = (price * discountPercent) / 100;
+            const discountedPrice = price - discountAmount;
+            const taxAmount = (discountedPrice * taxPercent) / 100;
+            const finalPrice = discountedPrice + taxAmount;
+
+            return {
+                name: p.name,
+                category: p.categoryName,
+                isActive: p.isActive,
+                price,
+                discountPercent,
+                discountedPrice: discountedPrice.toFixed(2),
+                taxPercent,
+                finalPrice: finalPrice.toFixed(2),
+                imageUrl: p.imageUrl,
+                description: p.description,
+            };
+        });
+
+        //  response
         return res.status(200).json({
             success: true,
-            data: products,
+            data: finalProducts,
         });
-        
+
     } catch (error) {
         return res.status(500).json({
             success: false,
@@ -79,9 +114,6 @@ export const addProduct = async (req, res) => {
         if (isActive == "0") {
             isActive = false;
         }
-
-
-
 
         // check category exists (if provided)
         if (categoryId) {

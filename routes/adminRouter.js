@@ -59,10 +59,10 @@ router.get("/profile", isAdminLoggedIn, (req, res) => {
 router.get("/taxes", isAdminLoggedIn,listTaxes);
 
 // Add Tax
-router.post("/taxes/add", isAdminLoggedIn,addTax);
+router.post("/taxes/add", isAdminLoggedIn,upload.none(),addTax);
 
 // Update Tax
-router.put("/taxes/update/:id", isAdminLoggedIn,updateTax);
+router.put("/taxes/update/:id", isAdminLoggedIn,upload.none(),updateTax);
 
 // Delete Tax
 router.delete("/taxes/delete/:id", isAdminLoggedIn,deleteTax);
@@ -75,10 +75,10 @@ router.delete("/taxes/delete/:id", isAdminLoggedIn,deleteTax);
 router.get("/categories", isAdminLoggedIn,listCategories);
 
 // add category
-router.post("/categories/add", isAdminLoggedIn,addCategory);
+router.post("/categories/add", isAdminLoggedIn,upload.none(),addCategory);
 
 // update category
-router.put("/categories/update/:id", isAdminLoggedIn,updateCategory);
+router.put("/categories/update/:id", isAdminLoggedIn,upload.none(),updateCategory);
 
 // delete category
 router.delete("/categories/delete/:id", isAdminLoggedIn,deleteCategory);
