@@ -1,7 +1,7 @@
 import express from "express";
 import multer from "multer";
 import dotenv from "dotenv";
-import { registerUser, loginUser, logoutUser } from "../controllers/userController.js";
+import { registerUser, loginUser, logoutUser ,updateUserProfile } from "../controllers/userController.js";
 import { isUserLoggedIn ,optionalAuth } from "../middlewares/isUserLoggedIn.js";
 import { userImageUpload } from "../middlewares/upload.js";
 import { listProducts } from "../controllers/productController.js";
@@ -26,6 +26,8 @@ router.post(
 router.post("/login", upload.none(), loginUser);
 
 router.post("/logout", isUserLoggedIn, logoutUser);
+
+router.put("/updateUserProfile/:id", isUserLoggedIn,userImageUpload.single("profile_image"),updateUserProfile )
 
 router.get("/dashboard", isUserLoggedIn, (req, res) => {
   res.status(200).json({

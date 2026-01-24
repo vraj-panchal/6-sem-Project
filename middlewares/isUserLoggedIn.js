@@ -21,18 +21,20 @@ export const isUserLoggedIn = async (req, res, next) => {
     }
 
     const users = await db
-      .select({
+        .select({
         user_id: userTable.id,
         username: userTable.username,
         email: userTable.email,
         role_name: rolesTable.name,
-        status_name: user_status.name
+        status_name: user_status.name,
       })
       .from(userTable)
       .innerJoin(rolesTable, eq(userTable.role_id, rolesTable.id))
       .innerJoin(user_status, eq(userTable.status_id, user_status.id))
       .where(eq(userTable.id, decoded.id))
       .limit(1);
+
+
 
     if (users.length === 0) return res.status(401).json({ success: false, message: "User not found" });
 
@@ -48,9 +50,8 @@ export const isUserLoggedIn = async (req, res, next) => {
     console.log("Middleware error:", err);
     return res.status(500).json({ success: false, message: "Something went wrong" });
   }
+
 };
-
-
 
 export const optionalAuth = (req, res, next) => {
   const token =
