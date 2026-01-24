@@ -1,7 +1,10 @@
+import {pgTable,varchar,integer,bigint,text,decimal,boolean,timestamp, bigserial} from "drizzle-orm/pg-core";
+
 import { productsTable } from "./product";
+import { ordersTable } from "./ordersTable";
 
 export const orderItemsTable = pgTable("order_items", {
-  id: bigint("id", { mode: "number" }).primaryKey(),
+  id: bigserial("id", { mode: "number" }).primaryKey(),
   order_id: bigint("order_id", { mode: "number" })
     .notNull()
     .references(() => ordersTable.id),

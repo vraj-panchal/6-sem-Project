@@ -1,8 +1,11 @@
+import { pgTable,serial,varchar,decimal, numeric, bigint,timestamp, uniqueIndex, bigserial } from "drizzle-orm/pg-core";
+
+
 import { userTable } from "./users";
-import { orderStatusTable } from "./order_status";
+import { orderStatusTable } from "./orderStatus.js";
 
 export const ordersTable = pgTable("orders", {
-  id: bigint("id", { mode: "number" }).primaryKey(),
+  id: bigserial("id", { mode: "number" }).primaryKey(),
   order_number: varchar("order_number", { length: 20 }).unique().notNull(),
   user_id: bigint("user_id", { mode: "number" })
     .notNull()

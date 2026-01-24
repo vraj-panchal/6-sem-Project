@@ -1,7 +1,5 @@
 import { z } from "zod";
 
-import { z } from "zod";
-
 // Validator for add item to the cart
 export const addToCartSchema = z.object({
   product_id: z.number({
