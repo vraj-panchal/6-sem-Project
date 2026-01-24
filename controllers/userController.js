@@ -207,9 +207,6 @@ export const logoutUser = async (req, res) => {
 };
 
 
-
-
-
 export const updateUserProfile = async (req, res) => {
   try {
     // 1. Prepare and Validate Data
