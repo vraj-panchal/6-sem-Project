@@ -9,84 +9,79 @@ import { success } from "zod";
 
 // List Products
 export const listProducts = async (req, res) => {
-    try {
-        // base query
-        let query = db
-            .select({
-                name: productsTable.name,
-                price: productsTable.price,
-                discountPercent: productsTable.discountPercent,
-                imageUrl: productsTable.imageUrl,
-                description: productsTable.description,
-                isActive: productsTable.isActive,
-                categoryName: categoriesTable.name,
-                taxPercent: taxTable.taxPercent,
-            })
-            
-            .from(productsTable)
-            .leftJoin(
-                categoriesTable,
-                eq(productsTable.categoryId, categoriesTable.id)
-            )
-            .leftJoin(
-                taxTable,
-                eq(productsTable.categoryId, taxTable.categoryId)
-            );
+     try {
+    let query = db
+      .select({
+        name: productsTable.name,
+        price: productsTable.price,
+        discountPercent: productsTable.discountPercent,
+        imageUrl: productsTable.imageUrl,
+        description: productsTable.description,
+        isActive: productsTable.isActive,
+        categoryName: categoriesTable.name,
+        taxPercent: taxTable.taxPercent,
+      })
+      .from(productsTable)
+      .leftJoin(
+        categoriesTable,
+        eq(productsTable.categoryId, categoriesTable.id)
+      )
+      .leftJoin(
+        taxTable,
+        eq(productsTable.categoryId, taxTable.categoryId)
+      );
 
-        // role-based filter
-        if (!req.user || req.user.role_id === 2) {
-            query = query.where(eq(productsTable.isActive, true));
-        }
-
-        //  execute query
-        const products = await query;
-
-        // check result
-        if (!products.length) {
-            return res.status(404).json({
-                success: false,
-                message: "No Product Found",
-            });
-        }
-
-        //  price calculation
-        const finalProducts = products.map((p) => {
-            const price = Number(p.price);
-            const discountPercent = Number(p.discountPercent || 0);
-            const taxPercent = Number(p.taxPercent || 0);
-
-            const discountAmount = (price * discountPercent) / 100;
-            const discountedPrice = price - discountAmount;
-            const taxAmount = (discountedPrice * taxPercent) / 100;
-            const finalPrice = discountedPrice + taxAmount;
-
-            return {
-                name: p.name,
-                category: p.categoryName,
-                isActive: p.isActive,
-                price,
-                discountPercent,
-                discountedPrice: discountedPrice.toFixed(2),
-                taxPercent,
-                finalPrice: finalPrice.toFixed(2),
-                imageUrl: p.imageUrl,
-                description: p.description,
-            };
-        });
-
-        //  response
-        return res.status(200).json({
-            success: true,
-            data: finalProducts,
-        });
-
-    } catch (error) {
-        return res.status(500).json({
-            success: false,
-            message: "Server Error",
-            error: error.message,
-        });
+    //  ROLE LOGIC (FIXED)
+    // Guest OR Normal User (role_id = 2) → only active products
+    if (!req.user || req.user.role_id === 2) {
+      query = query.where(eq(productsTable.isActive, true));
     }
+
+    const products = await query;
+
+    if (!products.length) {
+      return res.status(404).json({
+        success: false,
+        message: "No Product Found",
+      });
+    }
+
+    const finalProducts = products.map((p) => {
+      const price = Number(p.price);
+      const discountPercent = Number(p.discountPercent || 0);
+      const taxPercent = Number(p.taxPercent || 0);
+
+      const discountedPrice =
+        price - (price * discountPercent) / 100;
+
+      const finalPrice =
+        discountedPrice + (discountedPrice * taxPercent) / 100;
+
+      return {
+        name: p.name,
+        category: p.categoryName,
+        isActive: p.isActive,
+        price,
+        discountPercent,
+        discountedPrice: discountedPrice.toFixed(2),
+        taxPercent,
+        finalPrice: finalPrice.toFixed(2),
+        imageUrl: p.imageUrl,
+        description: p.description,
+      };
+    });
+
+    return res.status(200).json({
+      success: true,
+      data: finalProducts,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Server Error",
+      error: error.message,
+    });
+  }
 };
 
 // Add Product

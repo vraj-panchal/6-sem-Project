@@ -63,7 +63,7 @@ export const optionalAuth = (req, res, next) => {
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_KEY);
-    req.user = decoded; // only id/email/role if token has it
+    req.user = decoded; // id, role_id, role_name (from token)
     next();
   } catch {
     req.user = null;

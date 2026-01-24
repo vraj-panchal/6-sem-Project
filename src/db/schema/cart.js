@@ -1,6 +1,6 @@
 import { integer, pgTable, serial, unique } from "drizzle-orm/pg-core"; // Added unique
-import { userTable } from "./users";
-import { productsTable } from "./product";
+import { userTable } from "./users.js";
+import { productsTable } from "./product.js";
 
 export const cartTable = pgTable("cart", {
     id: serial("id").primaryKey(),

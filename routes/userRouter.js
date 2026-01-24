@@ -5,6 +5,7 @@ import { registerUser, loginUser, logoutUser } from "../controllers/userControll
 import { isUserLoggedIn ,optionalAuth } from "../middlewares/isUserLoggedIn.js";
 import { userImageUpload } from "../middlewares/upload.js";
 import { listProducts } from "../controllers/productController.js";
+import { addToCart } from "../controllers/cartController.js";
 
 
 dotenv.config();
@@ -42,5 +43,8 @@ router.get("/profile", isUserLoggedIn, (req, res) => {
 });
 
 router.get("/products",optionalAuth,listProducts);
+
+router.post("/cart", isUserLoggedIn,addToCart);
+
 
 export default router;

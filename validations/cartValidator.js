@@ -1,13 +1,15 @@
 import { z } from "zod";
 
-// Validator for add item to the cart
+// Add item to cart
 export const addToCartSchema = z.object({
-  product_id: z.number({
+  product_id: z.coerce.number({
     required_error: "Product ID is required",
     invalid_type_error: "Product ID must be a number",
-  }).int().positive(),
-  
-  quantity: z.number({
+  })
+  .int()
+  .positive(),
+
+  quantity: z.coerce.number({
     invalid_type_error: "Quantity must be a number",
   })
   .int()
@@ -15,9 +17,9 @@ export const addToCartSchema = z.object({
   .default(1),
 });
 
-// Validator for update the quantity (e.g., in the Cart page)
+// Update cart quantity
 export const updateCartSchema = z.object({
-  quantity: z.number({
+  quantity: z.coerce.number({
     required_error: "Quantity is required",
     invalid_type_error: "Quantity must be a number",
   })
