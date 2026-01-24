@@ -240,3 +240,48 @@ export const updateCartQuantity  = async (req,res) =>{
 
 
 
+export const removeFromCart = async (req, res) => {
+  try {
+    const userID = req.user.user_id;
+    const cartID = Number(req.params.id);
+
+    const cartItem = await db
+      .select()
+      .from(cartTable)
+      .where(
+        and(
+          eq(cartTable.id, cartID),
+          eq(cartTable.user_ID, userID)
+        )
+      );
+
+    if (!cartItem.length) {
+      return res.status(404).json({
+        success: false,
+        message: "Cart item not found",
+      });
+    }
+
+    await db
+      .delete(cartTable)
+      .where(
+        and(
+          eq(cartTable.id, cartID),
+          eq(cartTable.user_ID, userID)
+        )
+      );
+
+    return res.json({
+      success: true,
+      message: "Item removed from cart",
+    });
+
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+
