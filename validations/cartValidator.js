@@ -24,5 +24,6 @@ export const updateCartSchema = z.object({
     invalid_type_error: "Quantity must be a number",
   })
   .int()
-  .min(1, "Quantity must be at least 1"),
+  // .min(1, "Quantity must be at least 1"),
+   .min(0, "Quantity cannot be negative"),
 });
