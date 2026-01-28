@@ -22,6 +22,9 @@ export const listProducts = async (req, res) => {
                 name: productsTable.name,
                 price: productsTable.price,
                 discountPercent: productsTable.discountPercent,
+                cgstPercent: productsTable.cgstPercent,
+                sgstPercent: productsTable.sgstPercent,
+                igstPercent: productsTable.igstPercent,
                 imageUrl: productsTable.imageUrl,
                 description: productsTable.description,
             }).from(productsTable).where(eq(productsTable.isActive, true));
@@ -43,7 +46,7 @@ export const listProducts = async (req, res) => {
             success: true,
             data: products,
         });
-        
+
     } catch (error) {
         return res.status(500).json({
             success: false,
@@ -73,6 +76,9 @@ export const addProduct = async (req, res) => {
             discountPercent,
             description,
             stockQuantity,
+            cgstPercent,
+            sgstPercent,
+            igstPercent,
             isActive,
         } = result.data;
 
@@ -128,6 +134,9 @@ export const addProduct = async (req, res) => {
                 discountPercent,
                 description,
                 stockQuantity,
+                cgstPercent,
+                sgstPercent,
+                igstPercent,
                 isActive,
             })
             .returning();
@@ -175,6 +184,9 @@ export const updateProduct = async (req, res) => {
             discountPercent,
             description,
             stockQuantity,
+            cgstPercent,
+            sgstPercent,
+            igstPercent,
             isActive,
         } = result.data;
 

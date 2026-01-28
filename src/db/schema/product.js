@@ -29,7 +29,23 @@ export const productsTable = pgTable("products", {
 
   stockQuantity: integer("stock_quantity").notNull(),
 
-  
+   // ✅ GST fields
+  cgstPercent: decimal("cgst_percent", {
+    precision: 5,
+    scale: 2,
+  }).default("0"),
+
+  sgstPercent: decimal("sgst_percent", {
+    precision: 5,
+    scale: 2,
+  }).default("0"),
+
+  igstPercent: decimal("igst_percent", {
+    precision: 5,
+    scale: 2,
+  }).default("0"),
+
+
   isActive: boolean("is_active").default(true),
 
   createdAt: timestamp("created_at", { precision: 3 })

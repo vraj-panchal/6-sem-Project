@@ -30,13 +30,13 @@ CREATE TABLE "roles" (
 	"updated_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE "taxes" (
-	"id" serial PRIMARY KEY NOT NULL,
-	"category_id" integer NOT NULL,
-	"tax_percent" numeric(5, 2) NOT NULL,
-	"created_at" timestamp (3) DEFAULT now() NOT NULL,
-	"updated_at" timestamp (3) DEFAULT now() NOT NULL
-);
+-- CREATE TABLE "taxes" (
+-- 	"id" serial PRIMARY KEY NOT NULL,
+-- 	"category_id" integer NOT NULL,
+-- 	"tax_percent" numeric(5, 2) NOT NULL,
+-- 	"created_at" timestamp (3) DEFAULT now() NOT NULL,
+-- 	"updated_at" timestamp (3) DEFAULT now() NOT NULL
+-- );
 --> statement-breakpoint
 CREATE TABLE "users" (
 	"id" serial PRIMARY KEY NOT NULL,
@@ -63,7 +63,7 @@ CREATE TABLE "user_status" (
 --> statement-breakpoint
 ALTER TABLE "products" ADD CONSTRAINT "products_category_id_categories_id_fk" FOREIGN KEY ("category_id") REFERENCES "public"."categories"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "products" ADD CONSTRAINT "products_created_by_users_id_fk" FOREIGN KEY ("created_by") REFERENCES "public"."users"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "taxes" ADD CONSTRAINT "taxes_category_id_categories_id_fk" FOREIGN KEY ("category_id") REFERENCES "public"."categories"("id") ON DELETE restrict ON UPDATE cascade;--> statement-breakpoint
+-- ALTER TABLE "taxes" ADD CONSTRAINT "taxes_category_id_categories_id_fk" FOREIGN KEY ("category_id") REFERENCES "public"."categories"("id") ON DELETE restrict ON UPDATE cascade;--> statement-breakpoint
 ALTER TABLE "users" ADD CONSTRAINT "users_role_id_roles_id_fk" FOREIGN KEY ("role_id") REFERENCES "public"."roles"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "users" ADD CONSTRAINT "users_status_id_user_status_id_fk" FOREIGN KEY ("status_id") REFERENCES "public"."user_status"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-CREATE UNIQUE INDEX "tax_category_unique" ON "taxes" USING btree ("category_id");
+-- CREATE UNIQUE INDEX "tax_category_unique" ON "taxes" USING btree ("category_id");

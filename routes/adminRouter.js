@@ -93,10 +93,10 @@ router.delete("/categories/delete/:id", isAdminLoggedIn,deleteCategory);
 router.get("/products",isAdminLoggedIn,listProducts);
 
 //2️⃣ Add Product
-router.post("/products/add", isAdminLoggedIn,productImageUpload.single("product_images"),addProduct);
+router.post("/products/add", isAdminLoggedIn,productImageUpload.single("imageUrl"),addProduct);
 
 //3️⃣ Update Product
-router.put("/products/update/:id", isAdminLoggedIn,productImageUpload.single("product_images"),updateProduct);
+router.put("/products/update/:id", isAdminLoggedIn,productImageUpload.single("imageUrl"),updateProduct);
 
 //4️⃣ Delete Product
 router.delete("/products/delete/:id", isAdminLoggedIn,deleteProduct);
