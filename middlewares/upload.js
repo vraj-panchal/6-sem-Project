@@ -2,9 +2,7 @@ import multer from "multer";
 import path from "path";
 import crypto from "crypto";
 
-//--------------------------------------------------------------------------
-//🟩 adminimage upload
-//--------------------------------------------------------------------------
+// adminimage upload
 
 const adminImageDiskStorage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -23,9 +21,7 @@ export const adminImageUpload = multer({
   limits: { fileSize: 2 * 1024 * 1024 }, 
 });
 
-//--------------------------------------------------------------------------
-//🟩 userimage upload
-//--------------------------------------------------------------------------
+// userimage upload
 
 const userImageStorage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -44,9 +40,7 @@ export const userImageUpload = multer({
   limits: { fileSize: 2 * 1024 * 1024 },
 });
 
-//--------------------------------------------------------------------------
-//🟩 employeeimage upload
-//--------------------------------------------------------------------------
+// employeeimage upload
 
 const employeeImageStorage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -65,9 +59,7 @@ export const employeeImageUpload = multer({
   limits: { fileSize: 2 * 1024 * 1024 },
 });
 
-//--------------------------------------------------------------------------
-//🟩 productimage upload
-//--------------------------------------------------------------------------
+// productimage upload
 const productImageStorage = multer.diskStorage({
   destination: (req, file, cb) => {
     cb(null, "public/image/productsimages");  

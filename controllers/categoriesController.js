@@ -3,7 +3,7 @@ import { db } from "../config/db.js";
 import { categoriesTable } from "../src/db/schema/categories.js";
 import { createCategorySchema, updateCategorySchema } from "../validations/categoriesValidator.js";
 
-//1️⃣ List Categories
+// List Categories
 export const listCategories = async (req, res) => {
 
     try {
@@ -34,7 +34,7 @@ export const listCategories = async (req, res) => {
 
 };
 
-//2️⃣ Add Category
+// Add Category
 export const addCategory = async (req, res) => {
 
     try {
@@ -86,7 +86,7 @@ export const addCategory = async (req, res) => {
     }
 };
 
-//3️⃣ Update Category
+// Update Category
 export const updateCategory = async (req, res) => {
     try {
 

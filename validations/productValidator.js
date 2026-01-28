@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-//1️⃣ Create Product Validation Schema
+// Create Product Validation Schema
 export const createProductSchema = z.object({
   categoryId: z.coerce
     .number()
@@ -75,5 +75,5 @@ export const createProductSchema = z.object({
 
 });
 
-//2️⃣ Update Product Validation Schema
+// Update Product Validation Schema
 export const updateProductSchema = createProductSchema.partial();

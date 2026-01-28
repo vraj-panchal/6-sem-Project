@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-//1️⃣ Create Tax Validation Schema
+// Create Tax Validation Schema
 export const createTaxSchema = z.object({
   categoryId:z.coerce
     .number()
@@ -16,5 +16,5 @@ export const createTaxSchema = z.object({
     .max(999.99, "Tax percent cannot be greater than 999.99"),
 });
 
-//2️⃣ Update Tax Validation Schema
+// Update Tax Validation Schema
 export const updateTaxSchema = createTaxSchema.partial();

@@ -12,7 +12,7 @@ import { generateToken } from "../utils/generateTokens.js";
 // ================= REGISTER =================
 export const registerUser = async (req, res) => {
   try {
-    // ✅ Zod validation
+    //  Zod validation
     const result = userRegistrationSchema.safeParse(req.body);
     if (!result.success) {
       return res.status(400).json({
@@ -24,7 +24,7 @@ export const registerUser = async (req, res) => {
     const image = req.file?.filename || null;
     const { username, email, phonenumber, password } = result.data;
 
-    // ✅ Get role
+    //  Get role
     const role = await db
       .select()
       .from(rolesTable)
@@ -35,7 +35,7 @@ export const registerUser = async (req, res) => {
       return res.status(400).json({ success: false, message: "User role not found" });
     }
 
-    // ✅ Get status
+    //  Get status
     const status = await db
       .select()
       .from(user_status)
@@ -46,7 +46,7 @@ export const registerUser = async (req, res) => {
       return res.status(400).json({ success: false, message: "User status not found" });
     }
 
-    // ✅ Check existing user
+    //  Check existing user
     const existingUser = await db
       .select()
       .from(userTable)
@@ -60,7 +60,7 @@ export const registerUser = async (req, res) => {
       });
     }
 
-    // 🔐 bcrypt FLOW (UNCHANGED)
+    //  bcrypt FLOW (UNCHANGED)
     bcrypt.genSalt(10, function (err, salt) {
       if (err) {
         return res.status(500).json({ success: false, message: err.message });
@@ -71,7 +71,7 @@ export const registerUser = async (req, res) => {
           return res.status(500).json({ success: false, message: err.message });
         }
 
-        // ✅ Insert user
+        //  Insert user
         await db.insert(userTable).values({
           username,
           email,
@@ -82,7 +82,7 @@ export const registerUser = async (req, res) => {
           status_id: status[0].id,
         });
 
-        // ✅ Fetch created user
+        // Fetch created user
         const getCreatedUserRef = await db
           .select()
           .from(userTable)
@@ -91,10 +91,10 @@ export const registerUser = async (req, res) => {
 
         const getCreatedUser = getCreatedUserRef[0];
 
-        // ✅ Generate token
+        //  Generate token
         const token = generateToken(getCreatedUser);
 
-        // ✅ Set cookie
+        //  Set cookie
         res.cookie("token_ux", token, {
           httpOnly: true,
           maxAge: 10 * 24 * 60 * 60 * 1000,
