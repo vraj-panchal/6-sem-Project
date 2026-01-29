@@ -286,6 +286,116 @@ export const addProduct = async (req, res) => {
 };
 
 
+// // Update Product
+// export const updateProduct = async (req, res) => {
+//     try {
+//         const { id } = req.params;
+//         const result = updateProductSchema.safeParse(req.body);
+//         if (!result.success) {
+//             return res.status(400).json({
+//                 success: false,
+//                 errors: result.error.flatten().fieldErrors,
+//             });
+//         }
+
+//         const updatedFields = { ...result.data };
+
+//         // Add imageUrl if file is uploaded
+//         if (req.file) {
+//             updatedFields.imageUrl = req.file.path;
+//         }
+
+//         const {
+//             categoryId,
+//             createdBy,
+//             name,
+//             sku,
+//             price,
+//             discountPercent,
+//             description,
+//             stockQuantity,
+//             isActive,
+//         } = result.data;
+
+
+
+//         // check product exists
+//         const product = await db
+//             .select()
+//             .from(productsTable)
+//             .where(eq(productsTable.id, Number(id)))
+//             .limit(1);
+//         if (!product.length) {
+//             return res.status(404).json({
+//                 success: false,
+//                 message: "Product not found",
+//             });
+//         }
+//         // check category exists (if provided)
+//         if (categoryId) {
+//             const category = await db
+//                 .select()
+//                 .from(categoriesTable)
+//                 .where(eq(categoriesTable.id, categoryId))
+//                 .limit(1);
+//             if (!category.length) {
+//                 return res.status(404).json({
+//                     success: false,
+//                     message: "Category not found",
+//                 });
+//             }
+//         }
+
+//         // check duplicate SKU      
+//         if (sku) {
+//             const existingSku = await db
+//                 .select()
+//                 .from(productsTable)
+//                 .where(
+//                     and(
+//                         eq(productsTable.sku, sku),
+//                         ne(productsTable.id, Number(id))
+//                     )
+//                 )
+//                 .limit(1);
+//             if (existingSku.length) {
+//                 return res.status(400).json({
+//                     success: false,
+//                     message: "Product with this SKU already exists",
+//                 });
+//             }
+//         }
+
+//         // update product
+//         const updatedProduct = await db
+//             .update(productsTable)
+//             .set(updatedFields)
+//             .where(eq(productsTable.id, Number(id)))
+//             .returning();
+
+
+//         if (!updatedProduct.length) {
+//             return res.status(404).json({
+//                 success: false,
+//                 message: "Product not found for update",
+//             });
+//         }
+
+//         return res.status(200).json({
+//             success: true,
+//             message: "Product updated successfully",
+//             data: updatedProduct[0],
+//         });
+//     } catch (error) {
+//         return res.status(500).json({
+//             success: false,
+//             message: "Server Error",
+//             error: error.message,
+//         });
+//     }
+// };
+
+
 // Update Product
 export const updateProduct = async (req, res) => {
     try {
@@ -298,6 +408,7 @@ export const updateProduct = async (req, res) => {
             });
         }
 
+        // Initialize updatedFields with validated data
         const updatedFields = { ...result.data };
 
         // Add imageUrl if file is uploaded
@@ -314,10 +425,12 @@ export const updateProduct = async (req, res) => {
             discountPercent,
             description,
             stockQuantity,
+            // Extract Tax columns from result.data
+            cgstPercent,
+            sgstPercent,
+            igstPercent,
             isActive,
         } = result.data;
-
-
 
         // check product exists
         const product = await db
@@ -325,12 +438,14 @@ export const updateProduct = async (req, res) => {
             .from(productsTable)
             .where(eq(productsTable.id, Number(id)))
             .limit(1);
+            
         if (!product.length) {
             return res.status(404).json({
                 success: false,
                 message: "Product not found",
             });
         }
+
         // check category exists (if provided)
         if (categoryId) {
             const category = await db
@@ -367,12 +482,12 @@ export const updateProduct = async (req, res) => {
         }
 
         // update product
+        // updatedFields already contains cgstPercent, sgstPercent, igstPercent from result.data
         const updatedProduct = await db
             .update(productsTable)
             .set(updatedFields)
             .where(eq(productsTable.id, Number(id)))
             .returning();
-
 
         if (!updatedProduct.length) {
             return res.status(404).json({
