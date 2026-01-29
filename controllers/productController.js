@@ -6,10 +6,105 @@ import { createProductSchema, updateProductSchema } from "../validations/product
 import { taxTable } from "../src/db/schema/tax.js";
 import { success } from "zod";
 
+// // List Products
+// export const listProducts = async (req, res) => {
+//   try {
+//     let query = db
+//       .select({
+//         name: productsTable.name,
+//         price: productsTable.price,
+//         discountPercent: productsTable.discountPercent,
+//         imageUrl: productsTable.imageUrl,
+//         description: productsTable.description,
+//         // Pulling tax components from taxTable
+//         cgstPercent: taxTable.cgstPercent,
+//         sgstPercent: taxTable.sgstPercent,
+//         igstPercent: taxTable.igstPercent,
+//         isActive: productsTable.isActive,
+//         categoryName: categoriesTable.name,
+//       })
+
+//       .from(productsTable)
+//       .leftJoin(
+//         categoriesTable,
+//         eq(productsTable.categoryId, categoriesTable.id)
+//       );
+
+//     //  ROLE LOGIC (FIXED)
+//     // Guest OR Normal User (role_id = 2) → only active products
+//     if (!req.user || req.user.role_id === 2) {
+//       query = query.where(eq(productsTable.isActive, true));
+//     }
+
+//     const products = await query;
+
+//     if (!products.length) {
+//       return res.status(404).json({
+//         success: false,
+//         message: "No Product Found",
+//       });
+//     }
+
+//     const finalProducts = products.map((p) => {
+//       const price = Number(p.price || 0);
+//       const discountPercent = Number(p.discountPercent || 0);
+      
+//       // CGST, SGST, IGST Calculation Logic
+//       const cgst = Number(p.cgstPercent || 0);
+//       const sgst = Number(p.sgstPercent || 0);
+//       const igst = Number(p.igstPercent || 0);
+
+//       /**
+//        * In most GST implementations:
+//        * Total Tax = (CGST + SGST) OR (IGST)
+//        * We sum them here to get the total applicable tax percentage
+//        */
+//       const totalTaxPercent = igst > 0 ? igst : (cgst + sgst);
+
+//       // 1. Calculate Discounted Price
+//       const discountedPrice = price - (price * discountPercent) / 100;
+
+//       // 2. Calculate Final Price including Tax
+//       const taxAmount = (discountedPrice * totalTaxPercent) / 100;
+//       const finalPrice = discountedPrice + taxAmount;
+
+//       return {
+//         name: p.name,
+//         category: p.categoryName,
+//         isActive: p.isActive,
+//         price: price.toFixed(2),
+//         discountPercent,
+//         discountedPrice: discountedPrice.toFixed(2),
+//         // Tax Breakdown in Response
+//         taxDetails: {
+//           cgstPercent: cgst,
+//           sgstPercent: sgst,
+//           igstPercent: igst,
+//           totalTaxPercent: totalTaxPercent
+//         },
+//         finalPrice: finalPrice.toFixed(2),
+//         imageUrl: p.imageUrl,
+//         description: p.description,
+//       };
+//     });
+
+//     return res.status(200).json({
+//       success: true,
+//       data: finalProducts,
+//     });
+//   } catch (error) {
+//     return res.status(500).json({
+//       success: false,
+//       message: "Server Error",
+//       error: error.message,
+//     });
+//   }
+// };
+
 
 // List Products
 export const listProducts = async (req, res) => {
-     try {
+  try {
     let query = db
       .select({
         name: productsTable.name,
@@ -17,22 +112,20 @@ export const listProducts = async (req, res) => {
         discountPercent: productsTable.discountPercent,
         imageUrl: productsTable.imageUrl,
         description: productsTable.description,
+        // Select directly from productsTable now
+        cgstPercent: productsTable.cgstPercent,
+        sgstPercent: productsTable.sgstPercent,
+        igstPercent: productsTable.igstPercent,
         isActive: productsTable.isActive,
         categoryName: categoriesTable.name,
-        taxPercent: taxTable.taxPercent,
       })
       .from(productsTable)
       .leftJoin(
         categoriesTable,
         eq(productsTable.categoryId, categoriesTable.id)
-      )
-      .leftJoin(
-        taxTable,
-        eq(productsTable.categoryId, taxTable.categoryId)
       );
 
-    //  ROLE LOGIC (FIXED)
-    // Guest OR Normal User (role_id = 2) → only active products
+    // ROLE LOGIC
     if (!req.user || req.user.role_id === 2) {
       query = query.where(eq(productsTable.isActive, true));
     }
@@ -47,24 +140,37 @@ export const listProducts = async (req, res) => {
     }
 
     const finalProducts = products.map((p) => {
-      const price = Number(p.price);
+      const price = Number(p.price || 0);
       const discountPercent = Number(p.discountPercent || 0);
-      const taxPercent = Number(p.taxPercent || 0);
+      
+      // Get taxes from the product record
+      const cgst = Number(p.cgstPercent || 0);
+      const sgst = Number(p.sgstPercent || 0);
+      const igst = Number(p.igstPercent || 0);
 
-      const discountedPrice =
-        price - (price * discountPercent) / 100;
+      // Total Tax Logic
+      const totalTaxPercent = igst > 0 ? igst : (cgst + sgst);
 
-      const finalPrice =
-        discountedPrice + (discountedPrice * taxPercent) / 100;
+      // 1. Calculate Discounted Price
+      const discountedPrice = price - (price * discountPercent) / 100;
+
+      // 2. Calculate Final Price including Tax
+      const taxAmount = (discountedPrice * totalTaxPercent) / 100;
+      const finalPrice = discountedPrice + taxAmount;
 
       return {
         name: p.name,
         category: p.categoryName,
         isActive: p.isActive,
-        price,
-        discountPercent,
+        price: price.toFixed(2),
+        discountPercent: discountPercent,
         discountedPrice: discountedPrice.toFixed(2),
-        taxPercent,
+        taxDetails: {
+          cgstPercent: cgst,
+          sgstPercent: sgst,
+          igstPercent: igst,
+          totalTaxPercent: totalTaxPercent
+        },
         finalPrice: finalPrice.toFixed(2),
         imageUrl: p.imageUrl,
         description: p.description,
@@ -104,6 +210,9 @@ export const addProduct = async (req, res) => {
             discountPercent,
             description,
             stockQuantity,
+            cgstPercent, // Tax Column 1
+            sgstPercent, // Tax Column 2
+            igstPercent, // Tax Column 3
             isActive,
         } = result.data;
 
@@ -141,8 +250,6 @@ export const addProduct = async (req, res) => {
             });
         }
 
-
-
         // insert product
         const newProduct = await db
             .insert(productsTable)
@@ -156,6 +263,10 @@ export const addProduct = async (req, res) => {
                 discountPercent,
                 description,
                 stockQuantity,
+                // Adding Tax Columns to Insertion
+                cgstPercent: cgstPercent || 0,
+                sgstPercent: sgstPercent || 0,
+                igstPercent: igstPercent || 0,
                 isActive,
             })
             .returning();
