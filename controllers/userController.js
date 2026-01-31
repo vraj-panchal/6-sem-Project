@@ -6,7 +6,7 @@ import { db } from "../config/db.js";
 import { userTable } from "../src/db/schema/users.js";
 import { rolesTable } from "../src/db/schema/roles.js";
 import { user_status } from "../src/db/schema/user_status.js";
-import { userRegistrationSchema, userLoginSchema , updateUserSchema } from "../validations/userValidator.js";
+import { userRegistrationSchema, userLoginSchema , updateUserSchema ,forgotPasswordSchema } from "../validations/userValidator.js";
 import { generateToken } from "../utils/generateTokens.js";
 
 // ================= REGISTER =================
@@ -294,6 +294,63 @@ export const updateUserProfile = async (req, res) => {
 
   } catch (err) {
     console.error("Update Error:", err);
+    return res.status(500).json({
+      success: false,
+      message: "Internal Server Error",
+    });
+  }
+};
+
+
+export const forgotPassword = async (req, res) => {
+  try {
+    // 1. Validate body
+    const validation = forgotPasswordSchema.safeParse(req.body);
+
+    if (!validation.success) {
+      const errors = validation.error.flatten();
+
+      return res.status(400).json({
+        success: false,
+        fieldErrors: errors.fieldErrors,
+        formErrors: errors.formErrors,
+      });
+    }
+
+    const { password } = validation.data;
+    const { userId } = req.params;
+
+    // 2. Find user
+    const users = await db
+      .select()
+      .from(userTable)
+      .where(eq(userTable.id, userId))
+      .limit(1);
+
+    if (!users.length) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    // 3. Hash password
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
+
+    // 4. Update
+    await db
+      .update(userTable)
+      .set({ password: hashedPassword })
+      .where(eq(userTable.id, userId));
+
+    return res.status(200).json({
+      success: true,
+      message: "Password updated successfully",
+    });
+
+  } catch (err) {
+    console.error("Forgot Password Error:", err);
     return res.status(500).json({
       success: false,
       message: "Internal Server Error",

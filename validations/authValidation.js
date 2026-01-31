@@ -49,3 +49,19 @@ export const baseupdateUserSchema = z.object({
     message: "At least one field (password or phone number) is required",
   }
 );
+
+
+export const forgotPasswordSchema = z
+  .object({
+    password: z.string().min(6, "Password must be at least 6 characters"),
+    confirmPassword: z.string().min(6, "Confirm Password is required"),
+  })
+  .superRefine((data, ctx) => {
+    if (data.password !== data.confirmPassword) {
+      ctx.addIssue({
+        path: ["confirmPassword"],
+        message: "Passwords do not match",
+        code: z.ZodIssueCode.custom,
+      });
+    }
+  });
