@@ -53,6 +53,12 @@ app.use((err, req, res, next) => {
   });
 });
 
+app.get("/healthz" , (req, res) => {
+  res.json({
+    "data" : "success"
+  })
+})
+
 const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {
