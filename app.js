@@ -53,7 +53,7 @@ app.use((err, req, res, next) => {
   });
 });
 
-app.get("/healthz" , (req, res) => {
+app.get("/  " , (req, res) => {
   res.json({
     "data" : "success"
   })
