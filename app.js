@@ -53,7 +53,7 @@ app.use((err, req, res, next) => {
   });
 });
 
-app.get("/healthz" , (req, res) => {
+app.get("/health" , (req, res) => {
   res.status(200).json({
     success: true,
     message: "Server is running",
