@@ -1,6 +1,6 @@
 {
-  "id": "436f53d0-9c8d-42f0-9f81-32f9ba9c80ac",
-  "prevId": "00000000-0000-0000-0000-000000000000",
+  "id": "93b2d69e-4f4a-4389-b561-dd1a7dfa5a01",
+  "prevId": "436f53d0-9c8d-42f0-9f81-32f9ba9c80ac",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -415,6 +415,27 @@
           "type": "integer",
           "primaryKey": false,
           "notNull": true
+        },
+        "cgst_percent": {
+          "name": "cgst_percent",
+          "type": "numeric(5, 2)",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "'0'"
+        },
+        "sgst_percent": {
+          "name": "sgst_percent",
+          "type": "numeric(5, 2)",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "'0'"
+        },
+        "igst_percent": {
+          "name": "igst_percent",
+          "type": "numeric(5, 2)",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "'0'"
         },
         "is_active": {
           "name": "is_active",

@@ -5,7 +5,7 @@ import { db } from "../config/db.js";
 import { userTable } from "../src/db/schema/users.js";
 import { rolesTable } from "../src/db/schema/roles.js";
 import { user_status } from "../src/db/schema/user_status.js";
-import { adminRegistrationSchema, adminLoginSchema } from "../validations/adminValidator.js";
+import { adminRegistrationSchema, adminLoginSchema ,forgotPasswordSchema} from "../validations/adminValidator.js";
 import { generateToken } from "../utils/generateTokens.js";
 
 const JWT_KEY = process.env.JWT_KEY;
@@ -164,3 +164,72 @@ export const logoutAdmin = async (req, res) => {
   }
 };
 
+
+export const forgotAdminPassword = async (req, res) => {
+  try {
+    // 1. Validate body
+    const result = forgotPasswordSchema.safeParse(req.body);
+    
+    if (!result.success) {
+      return res.status(400).json({
+        success: false,
+        fieldErrors: result.error.flatten().fieldErrors,
+        formErrors: result.error.flatten().formErrors,
+      });
+    }
+
+    const { password } = result.data;
+    const { adminId } = req.params;
+
+    // 2. Check admin exists
+    const admin = await db
+      .select()
+      .from(userTable)
+      .where(eq(userTable.id, adminId))
+      .limit(1);
+
+    if (!admin.length) {
+      return res.status(404).json({
+        success: false,
+        message: "Admin not found",
+      });
+    }
+
+    // 3. bcrypt FLOW (UNCHANGED)
+    bcrypt.genSalt(10, function (err, salt) {
+      if (err) {
+        return res.status(500).json({
+          success: false,
+          message: err.message,
+        });
+      }
+
+      bcrypt.hash(password, salt, async function (err, hash) {
+        if (err) {
+          return res.status(500).json({
+            success: false,
+            message: err.message,
+          });
+        }
+
+        // 4. Update password
+        await db
+          .update(userTable)
+          .set({ password: hash })
+          .where(eq(userTable.id, adminId));
+
+        return res.status(200).json({
+          success: true,
+          message: "Password reset successfully",
+        });
+      });
+    });
+
+  } catch (err) {
+    console.error("ForgotAdminPassword Error:", err.message);
+    return res.status(500).json({
+      success: false,
+      message: "Internal Server Error",
+    });
+  }
+};

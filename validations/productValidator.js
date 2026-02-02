@@ -49,6 +49,24 @@ export const createProductSchema = z.object({
     .int("Stock must be an integer")
     .min(0, "Stock cannot be negative"),
 
+    cgstPercent: z.coerce
+    .number()
+    .min(0, "CGST cannot be negative")
+    .max(100, "CGST cannot exceed 100")
+    .optional(),
+
+  sgstPercent: z.coerce
+    .number()
+    .min(0, "SGST cannot be negative")
+    .max(100, "SGST cannot exceed 100")
+    .optional(),
+
+  igstPercent: z.coerce
+    .number()
+    .min(0, "IGST cannot be negative")
+    .max(100, "IGST cannot exceed 100")
+    .optional(),
+
   isActive:z.preprocess(
   (val) => val === "1" || val === "true",
   z.boolean()

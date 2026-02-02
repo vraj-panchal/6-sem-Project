@@ -4,6 +4,7 @@ import {
   registerAdmin,
   loginAdmin,
   logoutAdmin,
+  forgotAdminPassword,
 } from "../controllers/adminController.js";
 
 import { isAdminLoggedIn } from "../middlewares/isAdminLoggedIn.js";
@@ -37,6 +38,9 @@ router.post(
 router.post("/login",upload.none(), loginAdmin);
 
 router.post("/logout", isAdminLoggedIn, logoutAdmin);
+
+router.put("/forgot-password/:adminId",isAdminLoggedIn, forgotAdminPassword);
+
 
 router.get("/dashboard", isAdminLoggedIn, (req, res) => {
   res.status(200).json({
