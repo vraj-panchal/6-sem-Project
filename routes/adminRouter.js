@@ -46,7 +46,7 @@ router.post(
 
 router.post("/login",upload.none(), loginAdmin);
 
-router.post("/logout", isAdminLoggedIn, logoutAdmin);
+router.post("/logout", logoutAdmin);
 
 router.put("/forgot-password/:adminId",isAdminLoggedIn, forgotAdminPassword);
 
