@@ -5,6 +5,8 @@ import {
   loginAdmin,
   logoutAdmin,
   forgotAdminPassword,
+  getAdminProfileByUsername,
+  updateProfileImage
 } from "../controllers/adminController.js";
 
 import { isAdminLoggedIn } from "../middlewares/isAdminLoggedIn.js";
@@ -27,6 +29,13 @@ const router = express.Router();
 router.get("/", (req,res)=>{
     res.send("Hey Admin Route Working ....");
 })
+
+
+// Publicly viewable profile (e.g., domain.com/vraj-panchal)
+router.get("/:username", getAdminProfileByUsername);
+
+// Protected route to update the image
+router.put("/profile/update-image",isAdminLoggedIn, upload.single("profile_image"), updateProfileImage);
 
 // router.post("/register", registerAdmin);
 router.post(
@@ -102,8 +111,6 @@ router.put("/products/update/:id", isAdminLoggedIn,productImageUpload.single("pr
 
 // Delete Product
 router.delete("/products/delete/:id", isAdminLoggedIn,deleteProduct);
-
-
 
 
 export default router;
