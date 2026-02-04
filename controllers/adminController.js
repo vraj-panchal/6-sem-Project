@@ -5,10 +5,69 @@ import { db } from "../config/db.js";
 import { userTable } from "../src/db/schema/users.js";
 import { rolesTable } from "../src/db/schema/roles.js";
 import { user_status } from "../src/db/schema/user_status.js";
-import { adminRegistrationSchema, adminLoginSchema ,forgotPasswordSchema} from "../validations/adminValidator.js";
+import { adminRegistrationSchema, adminLoginSchema ,forgotPasswordSchema } from "../validations/adminValidator.js";
 import { generateToken } from "../utils/generateTokens.js";
 
 const JWT_KEY = process.env.JWT_KEY;
+
+
+
+// --------------------- VIEW PROFILE BY USERNAME ---------------------
+export const getAdminProfileByUsername = async (req, res) => {
+  try {
+    const { username } = req.params; // Get username from URL (/vraj-panchal)
+
+    const admin = await db
+      .select({
+        username: userTable.username,
+        email: userTable.email,
+        phonenumber: userTable.phonenumber,
+        profile_image: userTable.profile_image,
+      })
+      .from(userTable)
+      .where(eq(userTable.username, username))
+      .limit(1);
+
+    if (!admin.length) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: admin[0],
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+
+
+// --------------------- UPDATE PROFILE IMAGE ---------------------
+export const updateProfileImage = async (req, res) => {
+  try {
+    const adminId = req.user.id; // From verifyToken middleware
+    const newImage = req.file?.filename;
+
+    if (!newImage) {
+      return res.status(400).json({ success: false, message: "No image uploaded" });
+    }
+
+    await db
+      .update(userTable)
+      .set({ profile_image: newImage })
+      .where(eq(userTable.id, adminId));
+
+    return res.status(200).json({
+      success: true,
+      message: "Profile image updated!",
+      imageUrl: `/uploads/${newImage}` 
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
 
 // --------------------- REGISTER ADMIN ---------------------
 export const registerAdmin = async (req, res) => {
@@ -128,7 +187,7 @@ export const loginAdmin = async (req, res) => {
     res.cookie("token_ax", token, {
       httpOnly: true,
       maxAge: 10 * 24 * 60 * 60 * 1000, // 10 days
-      sameSite: "strict",
+      sameSite: "none",
       secure: process.env.NODE_ENV === "production",
     });
 
@@ -153,7 +212,7 @@ export const logoutAdmin = async (req, res) => {
     res.cookie("token_ax", "", {
       httpOnly: true,
       expires: new Date(0),
-      sameSite: "strict",
+      sameSite: "none",
       secure: process.env.NODE_ENV === "production",
     });
 
