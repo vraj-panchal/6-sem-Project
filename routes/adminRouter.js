@@ -53,11 +53,11 @@ router.get("/dashboard", isAdminLoggedIn, (req, res) => {
     admin: req.admin,
   });
 });
-  
+
 router.get("/profile", isAdminLoggedIn, (req, res) => {
   res.status(200).json({
     success: true,
-    data: req.user,   
+    data: req.admin,   
   });
 });
 
