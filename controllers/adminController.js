@@ -131,13 +131,20 @@ export const registerAdmin = async (req, res) => {
     const token = generateToken(adminData);
 
     // Set cookie
+    // res.cookie("token_ax", token, {
+    //   httpOnly: true,
+    //   maxAge: 10 * 24 * 60 * 60 * 1000, // 10 days
+    //   sameSite: "none",
+    //   secure: false,
+    // });
+
+
     res.cookie("token_ax", token, {
       httpOnly: true,
-      maxAge: 10 * 24 * 60 * 60 * 1000, // 10 days
-      sameSite: "none",
-      secure: false,
+      sameSite: "lax",
+      secure: false,   // 🔥 THIS IS THE FIX
+      maxAge: 10 * 24 * 60 * 60 * 1000
     });
-
     return res.status(201).json({
       success: true,
       message: "Admin Registered Successfully",
@@ -185,11 +192,18 @@ export const loginAdmin = async (req, res) => {
     const token = generateToken(adminData);
 
     // Set cookie
+    // res.cookie("token_ax", token, {
+    //   httpOnly: true,
+    //   maxAge: 10 * 24 * 60 * 60 * 1000, // 10 days
+    //   sameSite: "none",
+    //   secure: false,
+    // });
+
     res.cookie("token_ax", token, {
-      httpOnly: true,
-      maxAge: 10 * 24 * 60 * 60 * 1000, // 10 days
-      sameSite: "none",
-      secure: false,
+    httpOnly: true,
+    sameSite: "lax",
+    secure: false,   // 🔥 THIS IS THE FIX
+    maxAge: 10 * 24 * 60 * 60 * 1000
     });
 
     return res.status(200).json({
@@ -210,12 +224,19 @@ export const loginAdmin = async (req, res) => {
 // --------------------- LOGOUT ADMIN ---------------------
 export const logoutAdmin = async (req, res) => {
   try {
+    // res.cookie("token_ax", "", {
+    //   httpOnly: true,
+    //   expires: new Date(0),
+    //   sameSite: "none",
+    //   secure: false,
+    // });
+
     res.cookie("token_ax", "", {
-      httpOnly: true,
-      expires: new Date(0),
-      sameSite: "none",
-      secure: false,
-    });
+    httpOnly: true,
+    expires: new Date(0),
+    sameSite: "lax",
+    secure: false
+  });
 
     return res.status(200).json({ success: true, message: "Admin Logged Out Successfully" });
   } catch (err) {
