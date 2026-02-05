@@ -30,10 +30,6 @@ router.get("/", (req,res)=>{
     res.send("Hey Admin Route Working ....");
 })
 
-
-// Publicly viewable profile (e.g., domain.com/vraj-panchal)
-router.get("/:username", getAdminProfileByUsername);
-
 // Protected route to update the image
 router.put("/profile/update-image",isAdminLoggedIn, upload.single("profile_image"), updateProfileImage);
 
@@ -50,7 +46,6 @@ router.post("/logout", logoutAdmin);
 
 router.put("/forgot-password/:adminId",isAdminLoggedIn, forgotAdminPassword);
 
-
 router.get("/dashboard", isAdminLoggedIn, (req, res) => {
   res.status(200).json({
     success: true,
@@ -58,7 +53,7 @@ router.get("/dashboard", isAdminLoggedIn, (req, res) => {
     admin: req.admin,
   });
 });
-
+  
 router.get("/profile", isAdminLoggedIn, (req, res) => {
   res.status(200).json({
     success: true,
@@ -112,5 +107,9 @@ router.put("/products/update/:id", isAdminLoggedIn,productImageUpload.single("pr
 // Delete Product
 router.delete("/products/delete/:id", isAdminLoggedIn,deleteProduct);
 
+
+
+// Publicly viewable profile (e.g., domain.com/vraj-panchal)
+router.get("/:username", getAdminProfileByUsername);
 
 export default router;
