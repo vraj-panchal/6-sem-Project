@@ -134,7 +134,7 @@ export const registerAdmin = async (req, res) => {
       httpOnly: true,
       maxAge: 10 * 24 * 60 * 60 * 1000, // 10 days
       sameSite: "none",
-      secure: process.env.NODE_ENV === "production",
+      secure: true,
     });
 
     return res.status(201).json({
@@ -188,7 +188,7 @@ export const loginAdmin = async (req, res) => {
       httpOnly: true,
       maxAge: 10 * 24 * 60 * 60 * 1000, // 10 days
       sameSite: "none",
-      secure: process.env.NODE_ENV === "production",
+      secure: true,
     });
 
     return res.status(200).json({
@@ -213,7 +213,7 @@ export const logoutAdmin = async (req, res) => {
       httpOnly: true,
       expires: new Date(0),
       sameSite: "none",
-      secure: process.env.NODE_ENV === "production",
+      secure: true,
     });
 
     return res.status(200).json({ success: true, message: "Admin Logged Out Successfully" });
