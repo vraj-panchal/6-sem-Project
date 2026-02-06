@@ -97,6 +97,7 @@ CREATE TABLE "user_status" (
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL
 );
+
 --> statement-breakpoint
 ALTER TABLE "cart" ADD CONSTRAINT "cart_user_ID_users_id_fk" FOREIGN KEY ("user_ID") REFERENCES "public"."users"("id") ON DELETE restrict ON UPDATE cascade;--> statement-breakpoint
 ALTER TABLE "cart" ADD CONSTRAINT "cart_product_ID_products_id_fk" FOREIGN KEY ("product_ID") REFERENCES "public"."products"("id") ON DELETE restrict ON UPDATE cascade;--> statement-breakpoint
