@@ -35,7 +35,7 @@ router.get("/", (req, res) => {
 
 
 // Manage Users (NEW)
-router.get("/allusers", isAdminLoggedIn, getAllUsers);
+router.get("/users/all", isAdminLoggedIn, getAllUsers);
 router.put("/users/status/:id", isAdminLoggedIn, upload.none(), updateUserStatus);
 
 
@@ -120,6 +120,5 @@ router.delete("/products/delete/:id", isAdminLoggedIn, deleteProduct);
 
 
 // Publicly viewable profile (e.g., domain.com/vraj-panchal)
-router.get("/:username", getAdminProfileByUsername);
-
+router.get("/profile/:username", getAdminProfileByUsername);
 export default router;
