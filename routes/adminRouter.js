@@ -32,6 +32,13 @@ router.get("/", (req, res) => {
   res.send("Hey Admin Route Working ....");
 })
 
+
+
+// Manage Users (NEW)
+router.get("/users", isAdminLoggedIn, getAllUsers);
+router.put("/users/status/:id", isAdminLoggedIn, upload.none(), updateUserStatus);
+
+
 // Protected route to update the image
 router.put("/profile/update-image", isAdminLoggedIn, upload.single("profile_image"), updateProfileImage);
 
@@ -63,10 +70,6 @@ router.get("/profile", isAdminLoggedIn, (req, res) => {
     data: req.admin,
   });
 });
-
-// Manage Users (NEW)
-router.get("/users", isAdminLoggedIn, getAllUsers);
-router.put("/users/status/:id", isAdminLoggedIn, upload.none(), updateUserStatus);
 
 // Manage Tax
 
