@@ -55,6 +55,9 @@ CREATE TABLE "products" (
 	"discount_percent" numeric(5, 2) DEFAULT '0',
 	"description" text,
 	"stock_quantity" integer NOT NULL,
+	"cgst_percent" numeric(5, 2) DEFAULT '0',
+	"sgst_percent" numeric(5, 2) DEFAULT '0',
+	"igst_percent" numeric(5, 2) DEFAULT '0',
 	"is_active" boolean DEFAULT true,
 	"created_at" timestamp (3) DEFAULT now() NOT NULL,
 	"updated_at" timestamp (3) DEFAULT now() NOT NULL,
@@ -87,6 +90,7 @@ CREATE TABLE "users" (
 	"status_id" integer NOT NULL,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL,
+	"last_login" timestamp,
 	CONSTRAINT "users_username_unique" UNIQUE("username"),
 	CONSTRAINT "users_email_unique" UNIQUE("email")
 );

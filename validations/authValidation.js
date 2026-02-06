@@ -39,9 +39,9 @@ export const baseupdateUserSchema = z.object({
     .regex(/[0-9]/, "Password must contain at least one number")
     .regex(/[!@#$%^&*(),.?":{}|<>]/, "Password must contain at least one special character")
     .optional(),
-      profile_image: z.string().optional(), // filename from multer
+  profile_image: z.string().optional(), // filename from multer
 
-    old_password: z.string().optional(),
+  old_password: z.string().optional(),
 
 }).refine(
   (data) => data.password || data.phonenumber,
@@ -50,10 +50,10 @@ export const baseupdateUserSchema = z.object({
   }
 );
 
-
 export const forgotPasswordSchema = z
   .object({
-    password: z.string().min(6, "Password must be at least 6 characters"),
+    email: z.string().trim().email("Invalid email format"),
+    password: z.string().min(8, "Password must be at least 8 characters"),
     confirmPassword: z.string().min(6, "Confirm Password is required"),
   })
   .superRefine((data, ctx) => {
@@ -65,3 +65,4 @@ export const forgotPasswordSchema = z
       });
     }
   });
+

@@ -1,15 +1,31 @@
-import { eq, or } from "drizzle-orm";
+import { eq, or, and, gt } from "drizzle-orm";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { db } from "../config/db.js";
 import { userTable } from "../src/db/schema/users.js";
 import { rolesTable } from "../src/db/schema/roles.js";
 import { user_status } from "../src/db/schema/user_status.js";
-import { adminRegistrationSchema, adminLoginSchema ,forgotPasswordSchema } from "../validations/adminValidator.js";
+import { adminRegistrationSchema, adminLoginSchema, forgotPasswordSchema } from "../validations/adminValidator.js";
 import { generateToken } from "../utils/generateTokens.js";
-
+import { fa } from "zod/v4/locales";
+import crypto from "crypto";
 const JWT_KEY = process.env.JWT_KEY;
 
+
+
+const formatDateIST = (date) => {
+  if (!date) return null;
+  return new Date(date).toLocaleString("en-IN", {
+    timeZone: "Asia/Kolkata",
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: true,
+  });
+};
 
 
 // --------------------- VIEW PROFILE BY USERNAME ---------------------
@@ -46,7 +62,7 @@ export const getAdminProfileByUsername = async (req, res) => {
 // --------------------- UPDATE PROFILE IMAGE ---------------------
 export const updateProfileImage = async (req, res) => {
   try {
-    const adminId = req.user.id; // From verifyToken middleware
+    const adminId = req.admin.id; // Corrected from req.user.id
     const newImage = req.file?.filename;
 
     if (!newImage) {
@@ -61,7 +77,81 @@ export const updateProfileImage = async (req, res) => {
     return res.status(200).json({
       success: true,
       message: "Profile image updated!",
-      imageUrl: `/uploads/${newImage}` 
+      imageUrl: `/image/adminimage/${newImage}`
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// --------------------- GET ALL USERS (ADMIN) ---------------------
+export const getAllUsers = async (req, res) => {
+  try {
+    const users = await db
+      .select({
+        id: userTable.id,
+        username: userTable.username,
+        email: userTable.email,
+        phonenumber: userTable.phonenumber,
+        profile_image: userTable.profile_image,
+        role: rolesTable.name,
+        status: user_status.name,
+        created_at: userTable.created_at,
+        last_login: userTable.last_login,
+      })
+      .from(userTable)
+      .innerJoin(rolesTable, eq(userTable.role_id, rolesTable.id))
+      .innerJoin(user_status, eq(userTable.status_id, user_status.id))
+      .where(eq(rolesTable.name, "user")); // Only fetch users, not admins/employees
+
+    // Format dates for response
+    const formattedUsers = users.map((user) => ({
+      ...user,
+      created_at: formatDateIST(user.created_at),
+      last_login: formatDateIST(user.last_login),
+    }));
+
+    return res.status(200).json({
+      success: true,
+      data: formattedUsers,
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// --------------------- UPDATE USER STATUS (BLOCK/UNBLOCK) ---------------------
+export const updateUserStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body; // "active" or "inactive"
+
+    if (!["active", "inactive"].includes(status)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid status. Use 'active' or 'inactive'.",
+      });
+    }
+
+    // Get status ID
+    const statusRecord = await db
+      .select()
+      .from(user_status)
+      .where(eq(user_status.name, status))
+      .limit(1);
+
+    if (!statusRecord.length) {
+      return res.status(500).json({ success: false, message: "Status configuration missing" });
+    }
+
+    await db
+      .update(userTable)
+      .set({ status_id: statusRecord[0].id })
+      .where(eq(userTable.id, id));
+
+    return res.status(200).json({
+      success: true,
+      message: `User marked as ${status}`,
     });
   } catch (err) {
     return res.status(500).json({ success: false, message: err.message });
@@ -82,7 +172,7 @@ export const registerAdmin = async (req, res) => {
     }
 
     const { username, email, phonenumber, password } = result.data;
-    const image = req.file?.filename || null;
+    const image = req.file?.filename || "default-profile.png";
 
     // Get role
     const role = await db.select().from(rolesTable).where(eq(rolesTable.name, "admin")).limit(1);
@@ -130,11 +220,19 @@ export const registerAdmin = async (req, res) => {
     const token = generateToken(adminData);
 
     // Set cookie
+    // res.cookie("token_ax", token, {
+    //   httpOnly: true,
+    //   maxAge: 10 * 24 * 60 * 60 * 1000, // 10 days
+    //   sameSite: "none",
+    //   secure: false,
+    // });
+
+
     res.cookie("token_ax", token, {
       httpOnly: true,
-      maxAge: 10 * 24 * 60 * 60 * 1000, // 10 days
       sameSite: "none",
-      secure: process.env.NODE_ENV === "production",
+      secure: true,
+      maxAge: 10 * 24 * 60 * 60 * 1000
     });
 
     return res.status(201).json({
@@ -184,12 +282,25 @@ export const loginAdmin = async (req, res) => {
     const token = generateToken(adminData);
 
     // Set cookie
+    // res.cookie("token_ax", token, {
+    //   httpOnly: true,
+    //   maxAge: 10 * 24 * 60 * 60 * 1000, // 10 days
+    //   sameSite: "none",
+    //   secure: false,
+    // });
+
     res.cookie("token_ax", token, {
       httpOnly: true,
-      maxAge: 10 * 24 * 60 * 60 * 1000, // 10 days
       sameSite: "none",
-      secure: process.env.NODE_ENV === "production",
+      secure: true, // Only true on HTTPS    
+      maxAge: 10 * 24 * 60 * 60 * 1000
     });
+
+    // Update Last Login
+    await db
+      .update(userTable)
+      .set({ last_login: new Date() })
+      .where(eq(userTable.id, adminData.id));
 
     return res.status(200).json({
       success: true,
@@ -209,11 +320,18 @@ export const loginAdmin = async (req, res) => {
 // --------------------- LOGOUT ADMIN ---------------------
 export const logoutAdmin = async (req, res) => {
   try {
+    // res.cookie("token_ax", "", {
+    //   httpOnly: true,
+    //   expires: new Date(0),
+    //   sameSite: "none",
+    //   secure: false,
+    // });
+
     res.cookie("token_ax", "", {
       httpOnly: true,
       expires: new Date(0),
       sameSite: "none",
-      secure: process.env.NODE_ENV === "production",
+      secure: true,
     });
 
     return res.status(200).json({ success: true, message: "Admin Logged Out Successfully" });
@@ -224,37 +342,154 @@ export const logoutAdmin = async (req, res) => {
 };
 
 
+// export const forgotAdminPassword = async (req, res) => {
+//   try {
+//     // 1. Validate body
+//     const result = forgotPasswordSchema.safeParse(req.body);
+
+//     if (!result.success) {
+//       return res.status(400).json({
+//         success: false,
+//         fieldErrors: result.error.flatten().fieldErrors,
+//         formErrors: result.error.flatten().formErrors,
+//       });
+//     }
+
+//     const { password } = result.data;
+//     const { adminId } = req.params;
+
+//     // 2. Check admin exists
+//     const admin = await db
+//       .select()
+//       .from(userTable)
+//       .where(eq(userTable.id, adminId))
+//       .limit(1);
+
+//     if (!admin.length) {
+//       return res.status(404).json({
+//         success: false,
+//         message: "Admin not found",
+//       });
+//     }
+
+//     // 3. bcrypt FLOW (UNCHANGED)
+//     bcrypt.genSalt(10, function (err, salt) {
+//       if (err) {
+//         return res.status(500).json({
+//           success: false,
+//           message: err.message,
+//         });
+//       }
+
+//       bcrypt.hash(password, salt, async function (err, hash) {
+//         if (err) {
+//           return res.status(500).json({
+//             success: false,
+//             message: err.message,
+//           });
+//         }
+
+//         // 4. Update password
+//         await db
+//           .update(userTable)
+//           .set({ password: hash })
+//           .where(eq(userTable.id, adminId));
+
+//         return res.status(200).json({
+//           success: true,
+//           message: "Password reset successfully",
+//         });
+//       });
+//     });
+
+//   } catch (err) {
+//     console.error("ForgotAdminPassword Error:", err.message);
+//     return res.status(500).json({
+//       success: false,
+//       message: "Internal Server Error",
+//     });
+//   }
+// };
+
+
+// export const forgotAdminPassword = async (req, res) => {
+//   const { email } = req.body;
+
+//   const [admin] = await db.select().from(userTable).where(eq(userTable.email, email)).limit(1);
+//   if (!admin) return res.status(404).json({ message: "Email not found" });
+
+//   // Create a token that expires in 1 hour
+//   // We include the admin.id and their CURRENT password hash as a 'secret' 
+//   // This way, if they change their password once, the old link becomes invalid automatically!
+//   const secret = process.env.JWT_SECRET + admin.password; 
+//   const token = jwt.sign({ id: admin.id, email: admin.email }, secret, { expiresIn: "1h" });
+
+//   const resetUrl = `http://localhost:5173/reset-password/${admin.id}/${token}`;
+
+//   console.log("LINK:", resetUrl);
+//   return res.status(200).json({ success: true, message: "Link generated" });
+// };
+
+
+// export const resetAdminPassword = async (req, res) => {
+//  try {
+//     const { id, token } = req.params; // Link now includes ID and Token
+//     const { password } = req.body;
+
+//     // 1. Get the admin from DB to get their current password (the secret)
+//     const [admin] = await db.select().from(userTable).where(eq(userTable.id, id)).limit(1);
+//     if (!admin) return res.status(404).json({ message: "Admin not found" });
+
+//     // 2. Verify the token
+//     const secret = process.env.JWT_SECRET + admin.password;
+//     try {
+//       jwt.verify(token, secret);
+//     } catch (err) {
+//       return res.status(400).json({ message: "Link invalid or expired" });
+//     }
+
+//     // 3. Hash and Update
+//     const salt = await bcrypt.genSalt(10);
+//     const hashedPassword = await bcrypt.hash(password, salt);
+
+//     await db.update(userTable).set({ password: hashedPassword }).where(eq(userTable.id, id));
+
+//     return res.status(200).json({ success: true, message: "Password updated!" });
+//   } catch (err) {
+//     return res.status(500).json({ message: err.message });
+//   }
+// };
+
+
+// --------------------- FORGOT ADMIN PASSWORD ---------------------
+// --------------------- FORGOT ADMIN PASSWORD ---------------------
 export const forgotAdminPassword = async (req, res) => {
   try {
     // 1. Validate body
     const result = forgotPasswordSchema.safeParse(req.body);
-    
+
     if (!result.success) {
       return res.status(400).json({
         success: false,
-        fieldErrors: result.error.flatten().fieldErrors,
-        formErrors: result.error.flatten().formErrors,
+        errors: result.error.flatten().fieldErrors,
       });
     }
 
-    const { password } = result.data;
-    const { adminId } = req.params;
+    const { email, password } = result.data;
 
-    // 2. Check admin exists
-    const admin = await db
-      .select()
+    // 2. Fetch Admin by Email
+    const adminRef = await db
+      .select({ id: userTable.id })
       .from(userTable)
-      .where(eq(userTable.id, adminId))
+      .where(eq(userTable.email, email))
       .limit(1);
 
-    if (!admin.length) {
-      return res.status(404).json({
-        success: false,
-        message: "Admin not found",
-      });
+    if (!adminRef.length) {
+      return res.status(404).json({ success: false, message: "Email not found" });
     }
+    const adminId = adminRef[0].id;
 
-    // 3. bcrypt FLOW (UNCHANGED)
+    // 3. Hash Password (CALLBACK STYLE as requested)
     bcrypt.genSalt(10, function (err, salt) {
       if (err) {
         return res.status(500).json({
@@ -271,16 +506,23 @@ export const forgotAdminPassword = async (req, res) => {
           });
         }
 
-        // 4. Update password
-        await db
-          .update(userTable)
-          .set({ password: hash })
-          .where(eq(userTable.id, adminId));
+        try {
+          // 4. Update Password
+          await db
+            .update(userTable)
+            .set({ password: hash })
+            .where(eq(userTable.id, adminId));
 
-        return res.status(200).json({
-          success: true,
-          message: "Password reset successfully",
-        });
+          return res.status(200).json({
+            success: true,
+            message: "Password reset successfully",
+          });
+        } catch (dbErr) {
+          return res.status(500).json({
+            success: false,
+            message: dbErr.message,
+          });
+        }
       });
     });
 

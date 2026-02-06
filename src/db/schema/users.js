@@ -1,9 +1,9 @@
-import { serial,integer, pgTable, varchar, timestamp } from "drizzle-orm/pg-core";
+import { serial, integer, pgTable, varchar, timestamp } from "drizzle-orm/pg-core";
 import { rolesTable } from "./roles.js";
 import { user_status } from "./user_status.js";
 
 export const userTable = pgTable("users", {
-   id: serial("id").primaryKey(),
+  id: serial("id").primaryKey(),
   username: varchar({ length: 255 }).notNull().unique(),
   profile_image: varchar({ length: 500 }).default(null),
   email: varchar({ length: 255 }).notNull().unique(),
@@ -14,4 +14,5 @@ export const userTable = pgTable("users", {
 
   created_at: timestamp().defaultNow().notNull(),   //  OK
   updated_at: timestamp().defaultNow().$onUpdate(() => new Date()).notNull(),
+  last_login: timestamp(), // New field
 });

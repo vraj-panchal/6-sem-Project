@@ -6,7 +6,7 @@ import { db } from "../config/db.js";
 import { userTable } from "../src/db/schema/users.js";
 import { rolesTable } from "../src/db/schema/roles.js";
 import { user_status } from "../src/db/schema/user_status.js";
-import { userRegistrationSchema, userLoginSchema , updateUserSchema ,forgotPasswordSchema } from "../validations/userValidator.js";
+import { userRegistrationSchema, userLoginSchema, updateUserSchema, forgotPasswordSchema } from "../validations/userValidator.js";
 import { generateToken } from "../utils/generateTokens.js";
 
 // ================= REGISTER =================
@@ -21,7 +21,7 @@ export const registerUser = async (req, res) => {
       });
     }
 
-    const image = req.file?.filename || null;
+    const image = req.file?.filename || "default-profile.png";
     const { username, email, phonenumber, password } = result.data;
 
     //  Get role
@@ -98,7 +98,7 @@ export const registerUser = async (req, res) => {
         res.cookie("token_ux", token, {
           httpOnly: true,
           maxAge: 10 * 24 * 60 * 60 * 1000,
-      sameSite: "none",
+          sameSite: "none",
           secure: process.env.NODE_ENV === "production",
         });
 
@@ -151,7 +151,7 @@ export const loginUser = async (req, res) => {
 
     const Userpass = user[0];
 
-    bcrypt.compare(password, Userpass.password, function (err, isMatch) {
+    bcrypt.compare(password, Userpass.password, async function (err, isMatch) {
       if (err) {
         return res.status(500).json({ success: false, message: err.message });
       }
@@ -168,9 +168,15 @@ export const loginUser = async (req, res) => {
       res.cookie("token_ux", token, {
         httpOnly: true,
         maxAge: 10 * 24 * 60 * 60 * 1000,
-      sameSite: "none",
+        sameSite: "none",
         secure: process.env.NODE_ENV === "production",
       });
+
+      // Update Last Login
+      await db
+        .update(userTable)
+        .set({ last_login: new Date() })
+        .where(eq(userTable.id, Userpass.id));
 
       return res.status(200).json({
         success: true,
@@ -178,7 +184,7 @@ export const loginUser = async (req, res) => {
         data: {
           id: Userpass.id,
           email: Userpass.email,
-          role_id : Userpass.role_id,
+          role_id: Userpass.role_id,
         },
       });
     });
@@ -196,7 +202,7 @@ export const logoutUser = async (req, res) => {
   res.cookie("token_ux", "", {
     httpOnly: true,
     expires: new Date(0),
-      sameSite: "none",
+    sameSite: "none",
     secure: process.env.NODE_ENV === "production",
   });
 
@@ -302,51 +308,138 @@ export const updateUserProfile = async (req, res) => {
 };
 
 
+// ================= DASHBOARD & PROFILE =================
+export const getDashboard = async (req, res) => {
+  res.status(200).json({
+    success: true,
+    message: "Welcome to User Dashboard",
+    user: req.user,
+  });
+};
+
+export const getUserProfile = async (req, res) => {
+  res.status(200).json({
+    success: true,
+    data: req.user,
+  });
+};
+
+export const getUserProfileByUsername = async (req, res) => {
+  try {
+    const { username } = req.params;
+    const user = await db
+      .select({
+        username: userTable.username,
+        email: userTable.email,
+        phonenumber: userTable.phonenumber,
+        profile_image: userTable.profile_image,
+      })
+      .from(userTable)
+      .where(eq(userTable.username, username))
+      .limit(1);
+
+    if (!user.length) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: user[0],
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+export const updateProfileImage = async (req, res) => {
+  try {
+    const userId = req.user.user_id; // from isUserLoggedIn
+    const newImage = req.file?.filename;
+
+    if (!newImage) {
+      return res.status(400).json({ success: false, message: "No image uploaded" });
+    }
+
+    await db
+      .update(userTable)
+      .set({ profile_image: newImage })
+      .where(eq(userTable.id, userId));
+
+    return res.status(200).json({
+      success: true,
+      message: "Profile image updated!",
+      imageUrl: `/image/userimage/${newImage}`
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// ================= FORGOT PASSWORD (INSECURE + CALLBACK) =================
 export const forgotPassword = async (req, res) => {
   try {
     // 1. Validate body
-    const validation = forgotPasswordSchema.safeParse(req.body);
+    const result = forgotPasswordSchema.safeParse(req.body);
 
-    if (!validation.success) {
-      const errors = validation.error.flatten();
-
+    if (!result.success) {
       return res.status(400).json({
         success: false,
-        fieldErrors: errors.fieldErrors,
-        formErrors: errors.formErrors,
+        errors: result.error.flatten().fieldErrors,
       });
     }
 
-    const { password } = validation.data;
-    const { userId } = req.params;
+    const { email, password } = result.data;
 
-    // 2. Find user
+    // 2. Find user by EMAIL
     const users = await db
-      .select()
+      .select({ id: userTable.id })
       .from(userTable)
-      .where(eq(userTable.id, userId))
+      .where(eq(userTable.email, email))
       .limit(1);
 
     if (!users.length) {
       return res.status(404).json({
         success: false,
-        message: "User not found",
+        message: "Email not found",
       });
     }
+    const userId = users[0].id;
 
-    // 3. Hash password
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(password, salt);
+    // 3. Hash password (CALLBACK STYLE)
+    bcrypt.genSalt(10, function (err, salt) {
+      if (err) {
+        return res.status(500).json({
+          success: false,
+          message: err.message,
+        });
+      }
 
-    // 4. Update
-    await db
-      .update(userTable)
-      .set({ password: hashedPassword })
-      .where(eq(userTable.id, userId));
+      bcrypt.hash(password, salt, async function (err, hash) {
+        if (err) {
+          return res.status(500).json({
+            success: false,
+            message: err.message,
+          });
+        }
 
-    return res.status(200).json({
-      success: true,
-      message: "Password updated successfully",
+        try {
+          // 4. Update
+          await db
+            .update(userTable)
+            .set({ password: hash })
+            .where(eq(userTable.id, userId));
+
+          return res.status(200).json({
+            success: true,
+            message: "Password updated successfully",
+          });
+        } catch (dbErr) {
+          return res.status(500).json({
+            success: false,
+            message: dbErr.message,
+          });
+        }
+      });
     });
 
   } catch (err) {
