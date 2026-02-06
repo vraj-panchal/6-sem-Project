@@ -1,4 +1,4 @@
-import { eq, or } from "drizzle-orm";
+import { eq, or, and, gt } from "drizzle-orm";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { db } from "../config/db.js";
@@ -8,7 +8,7 @@ import { user_status } from "../src/db/schema/user_status.js";
 import { adminRegistrationSchema, adminLoginSchema ,forgotPasswordSchema } from "../validations/adminValidator.js";
 import { generateToken } from "../utils/generateTokens.js";
 import { fa } from "zod/v4/locales";
-
+import crypto from "crypto";
 const JWT_KEY = process.env.JWT_KEY;
 
 
@@ -247,37 +247,152 @@ export const logoutAdmin = async (req, res) => {
 };
 
 
+// export const forgotAdminPassword = async (req, res) => {
+//   try {
+//     // 1. Validate body
+//     const result = forgotPasswordSchema.safeParse(req.body);
+    
+//     if (!result.success) {
+//       return res.status(400).json({
+//         success: false,
+//         fieldErrors: result.error.flatten().fieldErrors,
+//         formErrors: result.error.flatten().formErrors,
+//       });
+//     }
+
+//     const { password } = result.data;
+//     const { adminId } = req.params;
+
+//     // 2. Check admin exists
+//     const admin = await db
+//       .select()
+//       .from(userTable)
+//       .where(eq(userTable.id, adminId))
+//       .limit(1);
+
+//     if (!admin.length) {
+//       return res.status(404).json({
+//         success: false,
+//         message: "Admin not found",
+//       });
+//     }
+
+//     // 3. bcrypt FLOW (UNCHANGED)
+//     bcrypt.genSalt(10, function (err, salt) {
+//       if (err) {
+//         return res.status(500).json({
+//           success: false,
+//           message: err.message,
+//         });
+//       }
+
+//       bcrypt.hash(password, salt, async function (err, hash) {
+//         if (err) {
+//           return res.status(500).json({
+//             success: false,
+//             message: err.message,
+//           });
+//         }
+
+//         // 4. Update password
+//         await db
+//           .update(userTable)
+//           .set({ password: hash })
+//           .where(eq(userTable.id, adminId));
+
+//         return res.status(200).json({
+//           success: true,
+//           message: "Password reset successfully",
+//         });
+//       });
+//     });
+
+//   } catch (err) {
+//     console.error("ForgotAdminPassword Error:", err.message);
+//     return res.status(500).json({
+//       success: false,
+//       message: "Internal Server Error",
+//     });
+//   }
+// };
+
+
+// export const forgotAdminPassword = async (req, res) => {
+//   const { email } = req.body;
+  
+//   const [admin] = await db.select().from(userTable).where(eq(userTable.email, email)).limit(1);
+//   if (!admin) return res.status(404).json({ message: "Email not found" });
+
+//   // Create a token that expires in 1 hour
+//   // We include the admin.id and their CURRENT password hash as a 'secret' 
+//   // This way, if they change their password once, the old link becomes invalid automatically!
+//   const secret = process.env.JWT_SECRET + admin.password; 
+//   const token = jwt.sign({ id: admin.id, email: admin.email }, secret, { expiresIn: "1h" });
+
+//   const resetUrl = `http://localhost:5173/reset-password/${admin.id}/${token}`;
+  
+//   console.log("LINK:", resetUrl);
+//   return res.status(200).json({ success: true, message: "Link generated" });
+// };
+
+
+// export const resetAdminPassword = async (req, res) => {
+//  try {
+//     const { id, token } = req.params; // Link now includes ID and Token
+//     const { password } = req.body;
+
+//     // 1. Get the admin from DB to get their current password (the secret)
+//     const [admin] = await db.select().from(userTable).where(eq(userTable.id, id)).limit(1);
+//     if (!admin) return res.status(404).json({ message: "Admin not found" });
+
+//     // 2. Verify the token
+//     const secret = process.env.JWT_SECRET + admin.password;
+//     try {
+//       jwt.verify(token, secret);
+//     } catch (err) {
+//       return res.status(400).json({ message: "Link invalid or expired" });
+//     }
+
+//     // 3. Hash and Update
+//     const salt = await bcrypt.genSalt(10);
+//     const hashedPassword = await bcrypt.hash(password, salt);
+
+//     await db.update(userTable).set({ password: hashedPassword }).where(eq(userTable.id, id));
+
+//     return res.status(200).json({ success: true, message: "Password updated!" });
+//   } catch (err) {
+//     return res.status(500).json({ message: err.message });
+//   }
+// };
+
+
 export const forgotAdminPassword = async (req, res) => {
   try {
-    // 1. Validate body
-    const result = forgotPasswordSchema.safeParse(req.body);
-    
-    if (!result.success) {
-      return res.status(400).json({
-        success: false,
-        fieldErrors: result.error.flatten().fieldErrors,
-        formErrors: result.error.flatten().formErrors,
-      });
-    }
+    const { email, password, confirmPassword } = req.body;
 
-    const { password } = result.data;
-    const { adminId } = req.params;
-
-    // 2. Check admin exists
-    const admin = await db
+    // 1. Check if the Email exists
+    const [admin] = await db
       .select()
       .from(userTable)
-      .where(eq(userTable.id, adminId))
+      .where(eq(userTable.email, email))
       .limit(1);
 
-    if (!admin.length) {
+    if (!admin) {
       return res.status(404).json({
         success: false,
-        message: "Admin not found",
+        message: "Email is not valid. Please register first.",
       });
     }
 
-    // 3. bcrypt FLOW (UNCHANGED)
+    // 2. Check if Passwords match
+    if (password !== confirmPassword) {
+      return res.status(400).json({
+        success: false,
+        message: "Passwords do not match.",
+      });
+    }
+
+    // 3. bcrypt FLOW (AS REQUESTED)
     bcrypt.genSalt(10, function (err, salt) {
       if (err) {
         return res.status(500).json({
@@ -294,11 +409,11 @@ export const forgotAdminPassword = async (req, res) => {
           });
         }
 
-        // 4. Update password
+        // 4. Update the password in the database
         await db
           .update(userTable)
           .set({ password: hash })
-          .where(eq(userTable.id, adminId));
+          .where(eq(userTable.email, email));
 
         return res.status(200).json({
           success: true,
