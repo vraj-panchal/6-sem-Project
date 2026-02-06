@@ -35,7 +35,7 @@ router.get("/", (req, res) => {
 
 
 // Manage Users (NEW)
-router.get("/users", isAdminLoggedIn, getAllUsers);
+router.get("/allusers", isAdminLoggedIn, getAllUsers);
 router.put("/users/status/:id", isAdminLoggedIn, upload.none(), updateUserStatus);
 
 
