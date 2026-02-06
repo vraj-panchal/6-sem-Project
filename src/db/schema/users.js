@@ -14,4 +14,6 @@ export const userTable = pgTable("users", {
 
   created_at: timestamp().defaultNow().notNull(),   //  OK
   updated_at: timestamp().defaultNow().$onUpdate(() => new Date()).notNull(),
+  last_login: timestamp(), // New field
+
 });
