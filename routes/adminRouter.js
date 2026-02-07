@@ -15,9 +15,6 @@ import { isAdminLoggedIn } from "../middlewares/isAdminLoggedIn.js";
 import { adminImageUpload } from "../middlewares/upload.js";
 
 import { listCategories, addCategory, updateCategory, deleteCategory } from "../controllers/categoriesController.js";
-import { listProducts, addProduct, updateProduct, deleteProduct } from "../controllers/productController.js";
-import { listTaxes, addTax, updateTax, deleteTax } from "../controllers/taxController.js";
-import { productImageUpload } from "../middlewares/upload.js";
 
 
 
@@ -31,6 +28,13 @@ const router = express.Router();
 router.get("/", (req, res) => {
   res.send("Hey Admin Route Working ....");
 })
+
+
+
+// Manage Users (NEW)
+router.get("/users/all", isAdminLoggedIn, getAllUsers);
+router.put("/users/status/:id", isAdminLoggedIn, upload.none(), updateUserStatus);
+
 
 // Protected route to update the image
 router.put("/profile/update-image", isAdminLoggedIn, upload.single("profile_image"), updateProfileImage);
@@ -64,23 +68,7 @@ router.get("/profile", isAdminLoggedIn, (req, res) => {
   });
 });
 
-// Manage Users (NEW)
-router.get("/users", isAdminLoggedIn, getAllUsers);
-router.put("/users/status/:id", isAdminLoggedIn, upload.none(), updateUserStatus);
 
-// Manage Tax
-
-// List Taxes
-router.get("/taxes", isAdminLoggedIn, listTaxes);
-
-// Add Tax
-router.post("/taxes/add", isAdminLoggedIn, upload.none(), addTax);
-
-// Update Tax
-router.put("/taxes/update/:id", isAdminLoggedIn, upload.none(), updateTax);
-
-// Delete Tax
-router.delete("/taxes/delete/:id", isAdminLoggedIn, deleteTax);
 
 
 
@@ -99,24 +87,10 @@ router.put("/categories/update/:id", isAdminLoggedIn, upload.none(), updateCateg
 router.delete("/categories/delete/:id", isAdminLoggedIn, deleteCategory);
 
 
-//------------------------------------------------------------
-// Manage Products
-//------------------------------------------------------------
-// List Products
-router.get("/products", isAdminLoggedIn, listProducts);
 
-// Add Product
-router.post("/products/add", isAdminLoggedIn, productImageUpload.single("imageUrl"), addProduct);
-
-// Update Product
-router.put("/products/update/:id", isAdminLoggedIn, productImageUpload.single("product_images"), updateProduct);
-
-// Delete Product
-router.delete("/products/delete/:id", isAdminLoggedIn, deleteProduct);
 
 
 
 // Publicly viewable profile (e.g., domain.com/vraj-panchal)
-router.get("/:username", getAdminProfileByUsername);
-
+router.get("/profile/:username", getAdminProfileByUsername);
 export default router;
