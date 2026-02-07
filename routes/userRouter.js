@@ -24,7 +24,7 @@ router.post(
 
 router.post("/login", upload.none(), loginUser);
 
-router.post("/logout", isUserLoggedIn, logoutUser);
+router.post("/logout", logoutUser);
 
 router.put("/updateUserProfile/:id", isUserLoggedIn, userImageUpload.single("profile_image"), updateUserProfile)
 
