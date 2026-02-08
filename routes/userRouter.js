@@ -2,7 +2,7 @@ import express from "express";
 import multer from "multer";
 import dotenv from "dotenv";
 import { registerUser, loginUser, logoutUser, updateUserProfile, forgotPassword, getDashboard, getUserProfile, getUserProfileByUsername, updateProfileImage } from "../controllers/userController.js";
-import { isUserLoggedIn, optionalAuth } from "../middlewares/isUserLoggedIn.js";
+import { isUserLoggedIn } from "../middlewares/isUserLoggedIn.js";
 import { userImageUpload } from "../middlewares/upload.js";
 
 
