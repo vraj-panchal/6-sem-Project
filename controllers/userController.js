@@ -1,5 +1,3 @@
-
-
 import { eq, or } from "drizzle-orm";
 import bcrypt from "bcrypt";
 import { db } from "../config/db.js";
@@ -97,8 +95,8 @@ export const registerUser = async (req, res) => {
         //  Set cookie
         res.cookie("token_ux", token, {
             httpOnly: true,
-            sameSite: "none",
-            secure: true,
+            secure: true, // Keep this true as Render provides HTTPS
+            sameSite: "none", // Keep this none for cross-origin
             maxAge: 10 * 24 * 60 * 60 * 1000
         });
 
@@ -166,10 +164,10 @@ export const loginUser = async (req, res) => {
       const token = generateToken(Userpass);
 
       res.cookie("token_ux", token, {
-            httpOnly: true,
-            sameSite: "none",
-            secure: true,
-            maxAge: 10 * 24 * 60 * 60 * 1000
+          httpOnly: true,
+          secure: true, // Keep this true as Render provides HTTPS
+          sameSite: "none", // Keep this none for cross-origin
+          maxAge: 10 * 24 * 60 * 60 * 1000
       });
 
       // Update Last Login
