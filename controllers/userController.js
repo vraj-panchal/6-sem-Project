@@ -1,5 +1,4 @@
 
-
 import { eq, or } from "drizzle-orm";
 import bcrypt from "bcrypt";
 import { db } from "../config/db.js";
@@ -96,10 +95,17 @@ export const registerUser = async (req, res) => {
 
         //  Set cookie
         res.cookie("token_ux", token, {
+<<<<<<< HEAD
           httpOnly: true,
           maxAge: 10 * 24 * 60 * 60 * 1000,
           sameSite: "strict",
           secure: process.env.NODE_ENV === "production",
+=======
+            httpOnly: true,
+            secure: true, // Keep this true as Render provides HTTPS
+            sameSite: "none", // Keep this none for cross-origin
+            maxAge: 10 * 24 * 60 * 60 * 1000
+>>>>>>> 49d2552 (Added product and batch logic)
         });
 
         return res.status(201).json({
@@ -166,10 +172,17 @@ export const loginUser = async (req, res) => {
       const token = generateToken(Userpass);
 
       res.cookie("token_ux", token, {
+<<<<<<< HEAD
         httpOnly: true,
         maxAge: 10 * 24 * 60 * 60 * 1000,
         sameSite: "strict",
         secure: process.env.NODE_ENV === "production",
+=======
+          httpOnly: true,
+          secure: true, // Keep this true as Render provides HTTPS
+          sameSite: "none", // Keep this none for cross-origin
+          maxAge: 10 * 24 * 60 * 60 * 1000
+>>>>>>> 49d2552 (Added product and batch logic)
       });
 
       return res.status(200).json({
@@ -193,10 +206,17 @@ export const loginUser = async (req, res) => {
 // ================= LOGOUT =================
 export const logoutUser = async (req, res) => {
   res.cookie("token_ux", "", {
+<<<<<<< HEAD
     httpOnly: true,
     expires: new Date(0),
     sameSite: "strict",
     secure: process.env.NODE_ENV === "production",
+=======
+      httpOnly: true,
+      sameSite: "none",
+      secure: true,
+      maxAge: 10 * 24 * 60 * 60 * 1000
+>>>>>>> 49d2552 (Added product and batch logic)
   });
 
   return res.status(200).json({
@@ -204,3 +224,699 @@ export const logoutUser = async (req, res) => {
     message: "User Logout",
   });
 };
+<<<<<<< HEAD
+=======
+
+
+export const updateUserProfile = async (req, res) => {
+  try {
+    // 1. Prepare and Validate Data
+    const dataToValidate = {
+      old_password: req.body.old_password || undefined,
+      password: req.body.password || undefined,
+      phonenumber: req.body.phonenumber || undefined,
+      profile_image: req.file ? req.file.filename : undefined,
+    };
+
+    const validation = updateUserSchema.safeParse(dataToValidate);
+    if (!validation.success) {
+      return res.status(400).json({
+        success: false,
+        errors: validation.error.flatten().fieldErrors,
+      });
+    }
+
+    const userID = req.user.user_id;
+    const { phonenumber, profile_image, password, old_password } = validation.data;
+
+    // 2. Fetch current user data from DB
+    const users = await db
+      .select()
+      .from(userTable)
+      .where(eq(userTable.id, userID))
+      .limit(1);
+
+    if (!users.length) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    const currentUser = users[0];
+    let updateData = {};
+
+    // 3. Handle Non-Sensitive Updates
+    if (phonenumber) updateData.phonenumber = phonenumber;
+    if (profile_image) updateData.profile_image = profile_image;
+
+    // 4. Handle Password Logic (Securely)
+    if (password) {
+      // Check if old_password was provided in the request
+      if (!old_password) {
+        return res.status(400).json({
+          success: false,
+          message: "Old password is required to set a new password",
+        });
+      }
+
+      // Compare plain-text old_password with the hashed password in DB
+      const isMatch = await bcrypt.compare(old_password, currentUser.password);
+
+      if (!isMatch) {
+        return res.status(400).json({
+          success: false,
+          message: "Old password is incorrect",
+        });
+      }
+
+      // Hash the NEW password
+      const salt = await bcrypt.genSalt(10);
+      updateData.password = await bcrypt.hash(password, salt);
+    }
+
+    // 5. Execute Update only if there is data to change
+    if (Object.keys(updateData).length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "No changes provided to update",
+      });
+    }
+
+    await db
+      .update(userTable)
+      .set(updateData)
+      .where(eq(userTable.id, userID));
+
+    return res.status(200).json({
+      success: true,
+      message: "Profile updated successfully",
+    });
+
+  } catch (err) {
+    console.error("Update Error:", err);
+    return res.status(500).json({
+      success: false,
+      message: "Internal Server Error",
+    });
+  }
+};
+
+
+// ================= DASHBOARD & PROFILE =================
+export const getDashboard = async (req, res) => {
+  res.status(200).json({
+    success: true,
+    message: "Welcome to User Dashboard",
+    user: req.user,
+  });
+};
+
+export const getUserProfile = async (req, res) => {
+  res.status(200).json({
+    success: true,
+    data: req.user,
+  });
+};
+
+export const getUserProfileByUsername = async (req, res) => {
+  try {
+    const { username } = req.params;
+    const user = await db
+      .select({
+        username: userTable.username,
+        email: userTable.email,
+        phonenumber: userTable.phonenumber,
+        profile_image: userTable.profile_image,
+      })
+      .from(userTable)
+      .where(eq(userTable.username, username))
+      .limit(1);
+
+    if (!user.length) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: user[0],
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+export const updateProfileImage = async (req, res) => {
+  try {
+    const userId = req.user.user_id; // from isUserLoggedIn
+    const newImage = req.file?.filename;
+
+    if (!newImage) {
+      return res.status(400).json({ success: false, message: "No image uploaded" });
+    }
+
+    await db
+      .update(userTable)
+      .set({ profile_image: newImage })
+      .where(eq(userTable.id, userId));
+
+    return res.status(200).json({
+      success: true,
+      message: "Profile image updated!",
+      imageUrl: `/image/userimage/${newImage}`
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// ================= FORGOT PASSWORD (INSECURE + CALLBACK) =================
+export const forgotPassword = async (req, res) => {
+  try {
+    // 1. Validate body
+    const result = forgotPasswordSchema.safeParse(req.body);
+
+    if (!result.success) {
+      return res.status(400).json({
+        success: false,
+        errors: result.error.flatten().fieldErrors,
+      });
+    }
+
+    const { email, password } = result.data;
+
+    // 2. Find user by EMAIL
+    const users = await db
+      .select({ id: userTable.id })
+      .from(userTable)
+      .where(eq(userTable.email, email))
+      .limit(1);
+
+    if (!users.length) {
+      return res.status(404).json({
+        success: false,
+        message: "Email not found",
+      });
+    }
+    const userId = users[0].id;
+
+    // 3. Hash password (CALLBACK STYLE)
+    bcrypt.genSalt(10, function (err, salt) {
+      if (err) {
+        return res.status(500).json({
+          success: false,
+          message: err.message,
+        });
+      }
+
+      bcrypt.hash(password, salt, async function (err, hash) {
+        if (err) {
+          return res.status(500).json({
+            success: false,
+            message: err.message,
+          });
+        }
+
+        try {
+          // 4. Update
+          await db
+            .update(userTable)
+            .set({ password: hash })
+            .where(eq(userTable.id, userId));
+
+          return res.status(200).json({
+            success: true,
+            message: "Password updated successfully",
+          });
+        } catch (dbErr) {
+          return res.status(500).json({
+            success: false,
+            message: dbErr.message,
+          });
+        }
+      });
+    });
+
+  } catch (err) {
+    console.error("Forgot Password Error:", err);
+    return res.status(500).json({
+      success: false,
+      message: "Internal Server Error",
+    });
+  }
+};
+
+
+// import { eq, or } from "drizzle-orm";
+// import bcrypt from "bcrypt";
+// import { db } from "../config/db.js";
+// import { userTable } from "../src/db/schema/users.js";
+// import { rolesTable } from "../src/db/schema/roles.js";
+// import { user_status } from "../src/db/schema/user_status.js";
+// import { userRegistrationSchema, userLoginSchema, updateUserSchema, forgotPasswordSchema } from "../validations/userValidator.js";
+// import { generateToken } from "../utils/generateTokens.js";
+
+// // ================= REGISTER =================
+// export const registerUser = async (req, res) => {
+//   try {
+//     //  Zod validation
+//     const result = userRegistrationSchema.safeParse(req.body);
+//     if (!result.success) {
+//       return res.status(400).json({
+//         success: false,
+//         errors: result.error.flatten().fieldErrors,
+//       });
+//     }
+
+//     const image = req.file?.filename || "default-profile.png";
+//     const { username, email, phonenumber, password } = result.data;
+
+   
+
+//     //  Get role
+//     const role = await db
+//       .select()
+//       .from(rolesTable)
+//       .where(eq(rolesTable.name, "user"))
+//       .limit(1);
+
+//     if (!role.length) {
+//       return res.status(400).json({ success: false, message: "User role not found" });
+//     }
+
+//     //  Get status
+//     const status = await db
+//       .select()
+//       .from(user_status)
+//       .where(eq(user_status.name, "active"))
+//       .limit(1);
+
+//     if (!status.length) {
+//       return res.status(400).json({ success: false, message: "User status not found" });
+//     }
+
+//     //  Check existing user
+//     const existingUser = await db
+//       .select()
+//       .from(userTable)
+//       .where(or(eq(userTable.email, email), eq(userTable.username, username)))
+//       .limit(1);
+
+//     if (existingUser.length) {
+//       return res.status(409).json({
+//         success: false,
+//         message: "Email or Username already exists",
+//       });
+//     }
+
+//     //  bcrypt FLOW (UNCHANGED)
+//     bcrypt.genSalt(10, function (err, salt) {
+//       if (err) {
+//         return res.status(500).json({ success: false, message: err.message });
+//       }
+
+//       bcrypt.hash(password, salt, async function (err, hash) {
+//         if (err) {
+//           return res.status(500).json({ success: false, message: err.message });
+//         }
+
+//         //  Insert user
+//         await db.insert(userTable).values({
+//           username,
+//           email,
+//           phonenumber,
+//           profile_image: image,
+//           password: hash,
+//           role_id: role[0].id,
+//           status_id: status[0].id,
+//         });
+
+//         // Fetch created user
+//         const getCreatedUserRef = await db
+//           .select()
+//           .from(userTable)
+//           .where(eq(userTable.email, email))
+//           .limit(1);
+
+//         const getCreatedUser = getCreatedUserRef[0];
+
+//         //  Generate token
+//         const token = generateToken(getCreatedUser);
+
+//         //  Set cookie
+//         res.cookie("token_ux", token, {
+//           httpOnly: true,
+//           maxAge: 10 * 24 * 60 * 60 * 1000,
+//           sameSite: "none",
+//           secure: process.env.NODE_ENV === "production",
+//         });
+
+//         return res.status(201).json({
+//           success: true,
+//           message: "User Registered Successfully",
+//           data: {
+//             id: getCreatedUser.id,
+//             username: getCreatedUser.username,
+//             email: getCreatedUser.email,
+//             role_id: getCreatedUser.role_id,
+//           },
+//         });
+//       });
+//     });
+
+//   } catch (err) {
+//     return res.status(500).json({
+//       success: false,
+//       message: err.message,
+//     });
+//   }
+// };
+
+// // ================= LOGIN =================
+// export const loginUser = async (req, res) => {
+//   try {
+//     const validation = userLoginSchema.safeParse(req.body);
+//     if (!validation.success) {
+//       return res.status(400).json({
+//         success: false,
+//         errors: validation.error.flatten().fieldErrors,
+//       });
+//     }
+
+//     const { email, password } = validation.data;
+
+//     const user = await db
+//       .select()
+//       .from(userTable)
+//       .where(eq(userTable.email, email))
+//       .limit(1);
+
+//     if (!user.length) {
+//       return res.status(401).json({
+//         success: false,
+//         message: "Email or Password Incorrect",
+//       });
+//     }
+
+//     const Userpass = user[0];
+
+//     bcrypt.compare(password, Userpass.password, async function (err, isMatch) {
+//       if (err) {
+//         return res.status(500).json({ success: false, message: err.message });
+//       }
+
+//       if (!isMatch) {
+//         return res.status(401).json({
+//           success: false,
+//           message: "Email or Password Incorrect",
+//         });
+//       }
+
+//       const token = generateToken(Userpass);
+
+//       res.cookie("token_ux", token, {
+//         httpOnly: true,
+//         maxAge: 10 * 24 * 60 * 60 * 1000,
+//         sameSite: "none",
+//         secure: process.env.NODE_ENV === "production",
+//       });
+
+//       // Update Last Login
+//       await db
+//         .update(userTable)
+//         .set({ last_login: new Date() })
+//         .where(eq(userTable.id, Userpass.id));
+
+//       return res.status(200).json({
+//         success: true,
+//         message: "User Logged In Successfully",
+//         data: {
+//           id: Userpass.id,
+//           email: Userpass.email,
+//           role_id: Userpass.role_id,
+//         },
+//       });
+//     });
+
+//   } catch (err) {
+//     return res.status(500).json({
+//       success: false,
+//       message: err.message,
+//     });
+//   }
+// };
+
+// // ================= LOGOUT =================
+// export const logoutUser = async (req, res) => {
+//   res.cookie("token_ux", "", {
+//     httpOnly: true,
+//     expires: new Date(0),
+//     sameSite: "none",
+//     secure: process.env.NODE_ENV === "production",
+//   });
+
+//   return res.status(200).json({
+//     success: true,
+//     message: "User Logout",
+//   });
+// };
+
+
+// export const updateUserProfile = async (req, res) => {
+//   try {
+//     // 1. Prepare and Validate Data
+//     const dataToValidate = {
+//       old_password: req.body.old_password || undefined,
+//       password: req.body.password || undefined,
+//       phonenumber: req.body.phonenumber || undefined,
+//       profile_image: req.file ? req.file.filename : undefined,
+//     };
+
+//     const validation = updateUserSchema.safeParse(dataToValidate);
+//     if (!validation.success) {
+//       return res.status(400).json({
+//         success: false,
+//         errors: validation.error.flatten().fieldErrors,
+//       });
+//     }
+
+//     const userID = req.user.user_id;
+//     const { phonenumber, profile_image, password, old_password } = validation.data;
+
+//     // 2. Fetch current user data from DB
+//     const users = await db
+//       .select()
+//       .from(userTable)
+//       .where(eq(userTable.id, userID))
+//       .limit(1);
+
+//     if (!users.length) {
+//       return res.status(404).json({
+//         success: false,
+//         message: "User not found",
+//       });
+//     }
+
+//     const currentUser = users[0];
+//     let updateData = {};
+
+//     // 3. Handle Non-Sensitive Updates
+//     if (phonenumber) updateData.phonenumber = phonenumber;
+//     if (profile_image) updateData.profile_image = profile_image;
+
+//     // 4. Handle Password Logic (Securely)
+//     if (password) {
+//       // Check if old_password was provided in the request
+//       if (!old_password) {
+//         return res.status(400).json({
+//           success: false,
+//           message: "Old password is required to set a new password",
+//         });
+//       }
+
+//       // Compare plain-text old_password with the hashed password in DB
+//       const isMatch = await bcrypt.compare(old_password, currentUser.password);
+
+//       if (!isMatch) {
+//         return res.status(400).json({
+//           success: false,
+//           message: "Old password is incorrect",
+//         });
+//       }
+
+//       // Hash the NEW password
+//       const salt = await bcrypt.genSalt(10);
+//       updateData.password = await bcrypt.hash(password, salt);
+//     }
+
+//     // 5. Execute Update only if there is data to change
+//     if (Object.keys(updateData).length === 0) {
+//       return res.status(400).json({
+//         success: false,
+//         message: "No changes provided to update",
+//       });
+//     }
+
+//     await db
+//       .update(userTable)
+//       .set(updateData)
+//       .where(eq(userTable.id, userID));
+
+//     return res.status(200).json({
+//       success: true,
+//       message: "Profile updated successfully",
+//     });
+
+//   } catch (err) {
+//     console.error("Update Error:", err);
+//     return res.status(500).json({
+//       success: false,
+//       message: "Internal Server Error",
+//     });
+//   }
+// };
+
+
+// // ================= DASHBOARD & PROFILE =================
+// export const getDashboard = async (req, res) => {
+//   res.status(200).json({
+//     success: true,
+//     message: "Welcome to User Dashboard",
+//     user: req.user,
+//   });
+// };
+
+// export const getUserProfile = async (req, res) => {
+//   res.status(200).json({
+//     success: true,
+//     data: req.user,
+//   });
+// };
+
+// export const getUserProfileByUsername = async (req, res) => {
+//   try {
+//     const { username } = req.params;
+//     const user = await db
+//       .select({
+//         username: userTable.username,
+//         email: userTable.email,
+//         phonenumber: userTable.phonenumber,
+//         profile_image: userTable.profile_image,
+//       })
+//       .from(userTable)
+//       .where(eq(userTable.username, username))
+//       .limit(1);
+
+//     if (!user.length) {
+//       return res.status(404).json({ success: false, message: "User not found" });
+//     }
+
+//     return res.status(200).json({
+//       success: true,
+//       data: user[0],
+//     });
+//   } catch (err) {
+//     return res.status(500).json({ success: false, message: err.message });
+//   }
+// };
+
+// export const updateProfileImage = async (req, res) => {
+//   try {
+//     const userId = req.user.user_id; // from isUserLoggedIn
+//     const newImage = req.file?.filename;
+
+//     if (!newImage) {
+//       return res.status(400).json({ success: false, message: "No image uploaded" });
+//     }
+
+//     await db
+//       .update(userTable)
+//       .set({ profile_image: newImage })
+//       .where(eq(userTable.id, userId));
+
+//     return res.status(200).json({
+//       success: true,
+//       message: "Profile image updated!",
+//       imageUrl: `/image/userimage/${newImage}`
+//     });
+//   } catch (err) {
+//     return res.status(500).json({ success: false, message: err.message });
+//   }
+// };
+
+// // ================= FORGOT PASSWORD (INSECURE + CALLBACK) =================
+// export const forgotPassword = async (req, res) => {
+//   try {
+//     // 1. Validate body
+//     const result = forgotPasswordSchema.safeParse(req.body);
+
+//     if (!result.success) {
+//       return res.status(400).json({
+//         success: false,
+//         errors: result.error.flatten().fieldErrors,
+//       });
+//     }
+
+//     const { email, password } = result.data;
+
+//     // 2. Find user by EMAIL
+//     const users = await db
+//       .select({ id: userTable.id })
+//       .from(userTable)
+//       .where(eq(userTable.email, email))
+//       .limit(1);
+
+//     if (!users.length) {
+//       return res.status(404).json({
+//         success: false,
+//         message: "Email not found",
+//       });
+//     }
+//     const userId = users[0].id;
+
+//     // 3. Hash password (CALLBACK STYLE)
+//     bcrypt.genSalt(10, function (err, salt) {
+//       if (err) {
+//         return res.status(500).json({
+//           success: false,
+//           message: err.message,
+//         });
+//       }
+
+//       bcrypt.hash(password, salt, async function (err, hash) {
+//         if (err) {
+//           return res.status(500).json({
+//             success: false,
+//             message: err.message,
+//           });
+//         }
+
+//         try {
+//           // 4. Update
+//           await db
+//             .update(userTable)
+//             .set({ password: hash })
+//             .where(eq(userTable.id, userId));
+
+//           return res.status(200).json({
+//             success: true,
+//             message: "Password updated successfully",
+//           });
+//         } catch (dbErr) {
+//           return res.status(500).json({
+//             success: false,
+//             message: dbErr.message,
+//           });
+//         }
+//       });
+//     });
+
+//   } catch (err) {
+//     console.error("Forgot Password Error:", err);
+//     return res.status(500).json({
+//       success: false,
+//       message: "Internal Server Error",
+//     });
+//   }
+// };
+>>>>>>> 49d2552 (Added product and batch logic)

@@ -42,4 +42,20 @@ router.get("/profile", isUserLoggedIn, (req, res) => {
 
 router.get("/products",isUserLoggedIn,listProducts);
 
+<<<<<<< HEAD
 export default router;
+=======
+
+router.get("/dashboard", isUserLoggedIn, getDashboard);
+
+router.get("/profile", isUserLoggedIn, getUserProfile);
+
+// router.get("/products",isUserLoggedIn,listProducts);
+
+
+
+// Public Profile
+router.get("/:username", getUserProfileByUsername);
+
+export default router;
+>>>>>>> 49d2552 (Added product and batch logic)

@@ -1,2 +1,6 @@
 node_modules
 .env
+drizzle.config.js
+config/db.js
+public
+testdb.js

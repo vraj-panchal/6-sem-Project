@@ -5,15 +5,46 @@
     {
       "idx": 0,
       "version": "7",
+<<<<<<< HEAD
       "when": 1768732748786,
       "tag": "0000_wandering_runaways",
+=======
+      "when": 1770548153671,
+      "tag": "0000_keen_sunfire",
+>>>>>>> 49d2552 (Added product and batch logic)
       "breakpoints": true
     },
     {
       "idx": 1,
       "version": "7",
+<<<<<<< HEAD
       "when": 1769611626266,
       "tag": "0001_brainy_doctor_octopus",
+=======
+      "when": 1770563483222,
+      "tag": "0001_workable_randall_flagg",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1770650764659,
+      "tag": "0002_hot_nuke",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1770651936346,
+      "tag": "0003_perpetual_excalibur",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1772207076698,
+      "tag": "0004_closed_miracleman",
+>>>>>>> 49d2552 (Added product and batch logic)
       "breakpoints": true
     }
   ]

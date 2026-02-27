@@ -7,152 +7,170 @@ import { createProductSchema, updateProductSchema } from "../validations/product
 
 // List Products
 export const listProducts = async (req, res) => {
-    try {
-        const products = await db.select().from(productsTable);
+  try {
+    // If role is USER → only show active products
+    if (req.user?.role_name === "user") {
 
-        if (!products.length) {
-            return res.status(404).json({
-                success: false,
-                message: "No products found",
-            });
-        }
+      const productsForUser = await db
+        .select({
+          id: productsTable.id,
+          productName: productsTable.productName,
+          brand: productsTable.brand,
+          sku: productsTable.sku,
+          unit: productsTable.unit,
+          baseWeight: productsTable.baseWeight,
+          baseUnit: productsTable.baseUnit,
+          cgst: productsTable.cgst,
+          sgst: productsTable.sgst,
+          igst: productsTable.igst,
+          imageUrl: productsTable.imageUrl,
+          description: productsTable.description,
+        })
+        .from(productsTable)
+        .where(eq(productsTable.isActive, true));
 
-        if (req.user.role_name == "user") {
-            const productsforuser = await db.select({
-                name: productsTable.name,
-                price: productsTable.price,
-                discountPercent: productsTable.discountPercent,
-                cgstPercent: productsTable.cgstPercent,
-                sgstPercent: productsTable.sgstPercent,
-                igstPercent: productsTable.igstPercent,
-                imageUrl: productsTable.imageUrl,
-                description: productsTable.description,
-            }).from(productsTable).where(eq(productsTable.isActive, true));
-
-            if (!productsforuser.length) {
-                return res.status(404).json({
-                    success: false,
-                    message: "No products",
-                }); 
-            }
-
-            return res.status(200).json({
-                success: true,
-                data: productsforuser,
-            });
-        }
-
-        return res.status(200).json({
-            success: true,
-            data: products,
+      if (!productsForUser.length) {
+        return res.status(404).json({
+          success: false,
+          message: "No active products found",
         });
+      }
 
-    } catch (error) {
-        return res.status(500).json({
-            success: false,
-            message: "Server Error",
-            error: error.message,
-        });
+      return res.status(200).json({
+        success: true,
+        data: productsForUser,
+      });
     }
+
+    // Admin / Employee → show all products
+    const products = await db
+      .select()
+      .from(productsTable);
+
+    if (!products.length) {
+      return res.status(404).json({
+        success: false,
+        message: "No products found",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: products,
+    });
+
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Server Error",
+      error: error.message,
+    });
+  }
 };
+
 
 // Add Product
 export const addProduct = async (req, res) => {
-    try {
-        const result = createProductSchema.safeParse(req.body);
-        if (!result.success) {
-            return res.status(400).json({
-                success: false,
-                errors: result.error.flatten().fieldErrors,
-            });
-        }
+  try {
+    const result = createProductSchema.safeParse(req.body);
 
-        let {
-            categoryId,
-            createdBy,
-            name,
-            sku,
-            price,
-            discountPercent,
-            description,
-            stockQuantity,
-            cgstPercent,
-            sgstPercent,
-            igstPercent,
-            isActive,
-        } = result.data;
-
-        if (isActive == "0") {
-            isActive = false;
-        }
-
-
-
-
-        // check category exists (if provided)
-        if (categoryId) {
-            const category = await db
-                .select()
-                .from(categoriesTable)
-                .where(eq(categoriesTable.id, categoryId))
-                .limit(1);
-
-            if (!category.length) {
-                return res.status(404).json({
-                    success: false,
-                    message: "Category not found",
-                });
-            }
-        }
-
-        // check duplicate SKU
-        const existingSku = await db
-            .select()
-            .from(productsTable)
-            .where(eq(productsTable.sku, sku))
-            .limit(1);
-
-        if (existingSku.length) {
-            return res.status(400).json({
-                success: false,
-                message: "Product with this SKU already exists",
-            });
-        }
-
-
-
-        // insert product
-        const newProduct = await db
-            .insert(productsTable)
-            .values({
-                categoryId,
-                createdBy: req.user.id,
-                name,
-                sku,
-                price,
-                imageUrl: req.file ? req.file.path : null,
-                discountPercent,
-                description,
-                stockQuantity,
-                cgstPercent,
-                sgstPercent,
-                igstPercent,
-                isActive,
-            })
-            .returning();
-
-        return res.status(201).json({
-            success: true,
-            message: "Product added successfully",
-            data: newProduct[0],
-        });
-    } catch (error) {
-        return res.status(500).json({
-            success: false,
-            message: "Server Error",
-            error: error.message,
-        });
+    if (!result.success) {
+      return res.status(400).json({
+        success: false,
+        errors: result.error.flatten().fieldErrors,
+      });
     }
+
+    let {
+      categoryId,
+      productName,
+      brand,
+      sku,
+      unit,
+      baseWeight,
+      baseUnit,
+      cgst,
+      sgst,
+      igst,
+      description,
+      isActive,
+    } = result.data;
+
+    // convert isActive properly
+    if (isActive === "0") isActive = false;
+
+    // ✅ 1️⃣ Check category exists
+    const category = await db
+      .select()
+      .from(categoriesTable)
+      .where(eq(categoriesTable.id, categoryId))
+      .limit(1);
+
+    if (!category.length) {
+      return res.status(404).json({
+        success: false,
+        message: "Category not found",
+      });
+    }
+
+    // ✅ 2️⃣ Validate unit against allowedUnits
+    const allowedUnits = category[0].allowedUnits;
+
+    if (!allowedUnits.includes(unit)) {
+      return res.status(400).json({
+        success: false,
+        message: `Unit must be one of: ${allowedUnits.join(", ")}`,
+      });
+    }
+
+    // ✅ 3️⃣ Check duplicate SKU
+    const existingSku = await db
+      .select()
+      .from(productsTable)
+      .where(eq(productsTable.sku, sku))
+      .limit(1);
+
+    if (existingSku.length) {
+      return res.status(400).json({
+        success: false,
+        message: "Product with this SKU already exists",
+      });
+    }
+
+    // ✅ 4️⃣ Insert product
+    const newProduct = await db
+      .insert(productsTable)
+      .values({
+        categoryId,
+        createdBy: req.admin.id,
+        productName,
+        brand,
+        sku,
+        unit,
+        baseWeight,
+        baseUnit,
+        cgst,
+        sgst,
+        igst,
+        description,
+        imageUrl: req.file ? req.file.path : null,
+        isActive,
+      })
+      .returning();
+
+    return res.status(201).json({
+      success: true,
+      message: "Product added successfully",
+      data: newProduct[0],
+    });
+
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Server Error",
+      error: error.message,
+    });
+  }
 };
 
 

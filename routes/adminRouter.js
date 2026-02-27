@@ -8,11 +8,11 @@ import {
 
 import { isAdminLoggedIn } from "../middlewares/isAdminLoggedIn.js";
 import { adminImageUpload } from "../middlewares/upload.js";
-
-import { listCategories,addCategory,updateCategory,deleteCategory } from "../controllers/categoriesController.js";
-import { listProducts,addProduct,updateProduct,deleteProduct } from "../controllers/productController.js";
-import { listTaxes,addTax,updateTax,deleteTax } from "../controllers/taxController.js";
 import { productImageUpload } from "../middlewares/upload.js";
+import { addProduct, listProducts, updateProduct, deleteProduct } from "../controllers/productController.js";
+
+import { listCategories, addCategory, updateCategory, deleteCategory } from "../controllers/categoriesController.js";
+import { listBatches,listallBatches, createProductBatch, updateBatch, deactivateBatch, adjustBatchStock } from "../controllers/productbatchController.js";
 
 
 
@@ -100,6 +100,42 @@ router.put("/products/update/:id", isAdminLoggedIn,productImageUpload.single("im
 router.delete("/products/delete/:id", isAdminLoggedIn,deleteProduct);
 
 
+//------------------------------------------------------------
+// Manage Products
+//------------------------------------------------------------
+// List Products
+router.get("/products",isAdminLoggedIn,listProducts);
 
+//2️⃣ Add Product
+router.post("/products/add", isAdminLoggedIn,productImageUpload.single("imageUrl"),addProduct);
+
+//3️⃣ Update Product
+router.put("/products/update/:id", isAdminLoggedIn,productImageUpload.single("imageUrl"),updateProduct);
+
+// Delete Product
+router.delete("/products/delete/:id", isAdminLoggedIn,deleteProduct);
+
+
+//------------------------------------------------------------
+// product batches and inventory management routes will go here
+//------------------------------------------------------------
+
+//1️⃣ List batches
+router.get("/batches/:id", isAdminLoggedIn, listBatches);
+
+//2️⃣ Create batch
+router.post("/batches/add", isAdminLoggedIn, upload.none(), createProductBatch);
+
+//3️⃣ Update batch
+router.put("/batches/update/:id", isAdminLoggedIn, upload.none(), updateBatch);
+
+//4️⃣ Deactivate batch (soft delete)
+router.put("/batches/deactivate/:id", isAdminLoggedIn, upload.none(), deactivateBatch);
+
+//🟩List all batches
+router.get("/batches", isAdminLoggedIn, listallBatches);
+
+//🟥Adjust stock
+router.post("/batches/:id/adjuststock", isAdminLoggedIn, adjustBatchStock);
 
 export default router;

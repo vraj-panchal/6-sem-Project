@@ -1,6 +1,11 @@
 {
+<<<<<<< HEAD
   "id": "c19fdfc3-09b2-4922-8e64-632325206875",
   "prevId": "f82c5c45-e816-4f09-a4e7-baf8a6a64cbf",
+=======
+  "id": "fae6600c-6476-4080-8c33-40e1aff5e73a",
+  "prevId": "f93b021b-5550-4171-8d68-2c711ac6b7bb",
+>>>>>>> 49d2552 (Added product and batch logic)
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -14,17 +19,31 @@
           "primaryKey": true,
           "notNull": true
         },
+<<<<<<< HEAD
         "name": {
           "name": "name",
+=======
+        "category_name": {
+          "name": "category_name",
+>>>>>>> 49d2552 (Added product and batch logic)
           "type": "varchar(100)",
           "primaryKey": false,
           "notNull": true
         },
+<<<<<<< HEAD
         "description": {
           "name": "description",
           "type": "varchar(255)",
           "primaryKey": false,
           "notNull": false
+=======
+        "allowed_units": {
+          "name": "allowed_units",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'[]'::jsonb"
+>>>>>>> 49d2552 (Added product and batch logic)
         },
         "created_at": {
           "name": "created_at",
@@ -44,7 +63,19 @@
       "indexes": {},
       "foreignKeys": {},
       "compositePrimaryKeys": {},
+<<<<<<< HEAD
       "uniqueConstraints": {},
+=======
+      "uniqueConstraints": {
+        "categories_category_name_unique": {
+          "name": "categories_category_name_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "category_name"
+          ]
+        }
+      },
+>>>>>>> 49d2552 (Added product and batch logic)
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false
@@ -55,7 +86,11 @@
       "columns": {
         "id": {
           "name": "id",
+<<<<<<< HEAD
           "type": "bigserial",
+=======
+          "type": "serial",
+>>>>>>> 49d2552 (Added product and batch logic)
           "primaryKey": true,
           "notNull": true
         },
@@ -63,6 +98,7 @@
           "name": "category_id",
           "type": "integer",
           "primaryKey": false,
+<<<<<<< HEAD
           "notNull": false
         },
         "created_by": {
@@ -73,28 +109,92 @@
         },
         "name": {
           "name": "name",
+=======
+          "notNull": true
+        },
+        "created_by": {
+          "name": "created_by",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "product_name": {
+          "name": "product_name",
+>>>>>>> 49d2552 (Added product and batch logic)
           "type": "varchar(255)",
           "primaryKey": false,
           "notNull": true
         },
+<<<<<<< HEAD
+=======
+        "brand": {
+          "name": "brand",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": false
+        },
+>>>>>>> 49d2552 (Added product and batch logic)
         "sku": {
           "name": "sku",
           "type": "varchar(50)",
           "primaryKey": false,
           "notNull": true
         },
+<<<<<<< HEAD
         "price": {
           "name": "price",
           "type": "numeric(10, 2)",
           "primaryKey": false,
           "notNull": true
         },
+=======
+        "unit": {
+          "name": "unit",
+          "type": "varchar(10)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "base_weight": {
+          "name": "base_weight",
+          "type": "numeric(12, 2)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "base_unit": {
+          "name": "base_unit",
+          "type": "varchar(10)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "cgst": {
+          "name": "cgst",
+          "type": "numeric(5, 2)",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "'0'"
+        },
+        "sgst": {
+          "name": "sgst",
+          "type": "numeric(5, 2)",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "'0'"
+        },
+        "igst": {
+          "name": "igst",
+          "type": "numeric(5, 2)",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "'0'"
+        },
+>>>>>>> 49d2552 (Added product and batch logic)
         "image_url": {
           "name": "image_url",
           "type": "varchar(255)",
           "primaryKey": false,
           "notNull": false
         },
+<<<<<<< HEAD
         "discount_percent": {
           "name": "discount_percent",
           "type": "numeric(5, 2)",
@@ -102,12 +202,15 @@
           "notNull": false,
           "default": "'0'"
         },
+=======
+>>>>>>> 49d2552 (Added product and batch logic)
         "description": {
           "name": "description",
           "type": "text",
           "primaryKey": false,
           "notNull": false
         },
+<<<<<<< HEAD
         "stock_quantity": {
           "name": "stock_quantity",
           "type": "integer",
@@ -135,6 +238,8 @@
           "notNull": false,
           "default": "'0'"
         },
+=======
+>>>>>>> 49d2552 (Added product and batch logic)
         "is_active": {
           "name": "is_active",
           "type": "boolean",
@@ -144,6 +249,7 @@
         },
         "created_at": {
           "name": "created_at",
+<<<<<<< HEAD
           "type": "timestamp (3)",
           "primaryKey": false,
           "notNull": true,
@@ -154,6 +260,11 @@
           "type": "timestamp (3)",
           "primaryKey": false,
           "notNull": true,
+=======
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+>>>>>>> 49d2552 (Added product and batch logic)
           "default": "now()"
         }
       },
@@ -169,7 +280,11 @@
           "columnsTo": [
             "id"
           ],
+<<<<<<< HEAD
           "onDelete": "set null",
+=======
+          "onDelete": "restrict",
+>>>>>>> 49d2552 (Added product and batch logic)
           "onUpdate": "no action"
         },
         "products_created_by_users_id_fk": {
@@ -182,7 +297,11 @@
           "columnsTo": [
             "id"
           ],
+<<<<<<< HEAD
           "onDelete": "set null",
+=======
+          "onDelete": "no action",
+>>>>>>> 49d2552 (Added product and batch logic)
           "onUpdate": "no action"
         }
       },
@@ -239,6 +358,7 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
+<<<<<<< HEAD
     "public.taxes": {
       "name": "taxes",
       "schema": "",
@@ -314,6 +434,8 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
+=======
+>>>>>>> 49d2552 (Added product and batch logic)
     "public.users": {
       "name": "users",
       "schema": "",
@@ -380,6 +502,15 @@
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
+<<<<<<< HEAD
+=======
+        },
+        "last_login": {
+          "name": "last_login",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+>>>>>>> 49d2552 (Added product and batch logic)
         }
       },
       "indexes": {},
@@ -426,6 +557,7 @@
           "columns": [
             "email"
           ]
+<<<<<<< HEAD
         },
         "users_phonenumber_unique": {
           "name": "users_phonenumber_unique",
@@ -433,6 +565,8 @@
           "columns": [
             "phonenumber"
           ]
+=======
+>>>>>>> 49d2552 (Added product and batch logic)
         }
       },
       "policies": {},
