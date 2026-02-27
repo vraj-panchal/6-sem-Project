@@ -8,6 +8,7 @@ import {
   getAdminProfileByUsername,
   updateProfileImage,
   getAllUsers,
+  getAllEmployees,
   updateUserStatus,
 } from "../controllers/adminController.js";
 
@@ -33,6 +34,7 @@ router.get("/", (req, res) => {
 
 // Manage Users (NEW)
 router.get("/users/all", isAdminLoggedIn, getAllUsers);
+router.get("/employees/all", isAdminLoggedIn, getAllEmployees);
 router.put("/users/status/:id", isAdminLoggedIn, upload.none(), updateUserStatus);
 
 

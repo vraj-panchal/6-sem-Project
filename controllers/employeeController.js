@@ -22,7 +22,7 @@ export const registerEmployee = async (req, res) => {
       });
     }
 
-    const image = req.file?.filename || null;
+    const image = req.file?.filename || "default-profile.png";
     const { username, email, phonenumber, password } = result.data;
 
     // role = employee
@@ -67,42 +67,35 @@ export const registerEmployee = async (req, res) => {
       });
     }
 
-    //  bcrypt FLOW (UNCHANGED)
-    bcrypt.genSalt(10, function (err, salt) {
-      if (err) {
-        return res.status(500).json({ success: false, message: err.message });
-      }
+    // Hash password
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
 
-      bcrypt.hash(password, salt, async function (err, hash) {
-        if (err) {
-          return res.status(500).json({ success: false, message: err.message });
-        }
+    // Insert employee
+    await db.insert(userTable).values({
+      username,
+      email,
+      phonenumber,
+      profile_image: image,
+      password: hashedPassword,
+      role_id: role[0].id,
+      status_id: status[0].id,
+    });
 
-        await db.insert(userTable).values({
-          username,
-          email,
-          phonenumber,
-          profile_image: image,
-          password: hash,
-          role_id: role[0].id,
-          status_id: status[0].id,
-        });
+    const [employee] = await db
+      .select()
+      .from(userTable)
+      .where(eq(userTable.email, email));
 
-        const [employee] = await db
-          .select()
-          .from(userTable)
-          .where(eq(userTable.email, email));
-
-        return res.status(201).json({
-          success: true,
-          message: "Employee Registered Successfully",
-          data: {
-            id: employee.id,
-            username: employee.username,
-            email: employee.email,
-          },
-        });
-      });
+    return res.status(201).json({
+      success: true,
+      message: "Employee Registered Successfully",
+      data: {
+        id: employee.id,
+        username: employee.username,
+        email: employee.email,
+        role_id: employee.role_id,
+      },
     });
   } catch (err) {
     return res.status(500).json({
@@ -157,10 +150,16 @@ export const loginEmployee = async (req, res) => {
     //  COOKIE
     res.cookie("token_ex", token_ex, {
       httpOnly: true,
-      maxAge: 10 * 24 * 60 * 60 * 1000,
-      sameSite: "strict",
-      secure: process.env.NODE_ENV === "production",
+      sameSite: "none",
+      secure: true, // Only true on HTTPS    
+      maxAge: 10 * 24 * 60 * 60 * 1000
     });
+
+    // Update Last Login
+    await db
+      .update(userTable)
+      .set({ last_login: new Date() })
+      .where(eq(userTable.id, emp.id));
 
     return res.status(200).json({
       success: true,
@@ -184,8 +183,8 @@ export const logoutEmployee = async (req, res) => {
   res.cookie("token_ex", "", {
     httpOnly: true,
     expires: new Date(0),
-    sameSite: "strict",
-    secure: process.env.NODE_ENV === "production",
+    sameSite: "none",
+    secure: true,
   });
 
   return res.status(200).json({
