@@ -3,7 +3,7 @@ import { Pool } from "pg";
 import dotenv from "dotenv";
 
 dotenv.config();
-import * as schema from "./schema"; // Import your table definitions
+// import * as schema from "./schema"; // Import your table definitions
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: {
