@@ -11,5 +11,5 @@ const pool = new Pool({
   },
 });
 
-// export const db = drizzle(pool);
-export const db = drizzle(pool, { schema });
+export const db = drizzle(pool);
+// export const db = drizzle(pool, { schema });
