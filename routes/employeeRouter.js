@@ -32,7 +32,7 @@ router.post(
 router.post("/login",upload.none(), loginEmployee);
 
 // EMPLOYEE logout
-router.post("/logout", isEmployeeLoggedIn, logoutEmployee);
+router.post("/logout", logoutEmployee);
 
 // EMPLOYEE dashboard
 router.get("/dashboard", isEmployeeLoggedIn, (req, res) => {
