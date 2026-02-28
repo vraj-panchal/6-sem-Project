@@ -29,7 +29,7 @@ router.post(
 );
 
 // EMPLOYEE login
-router.post("/login", loginEmployee);
+router.post("/login",upload.none(), loginEmployee);
 
 // EMPLOYEE logout
 router.post("/logout", isEmployeeLoggedIn, logoutEmployee);
