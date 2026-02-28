@@ -148,13 +148,22 @@ export const loginEmployee = async (req, res) => {
     //  JWT TOKEN
     const token_ex = generateToken(emp);
 
-    //  COOKIE
+    // //  COOKIE
+    // res.cookie("token_ex", token_ex, {
+    //   httpOnly: true,
+    //   secure: true, // Keep this true as Render provides HTTPS
+    //   sameSite: "none",
+    //   maxAge: 10 * 24 * 60 * 60 * 1000
+    // });
+
     res.cookie("token_ex", token_ex, {
-      httpOnly: true,
-      secure: true, // Keep this true as Render provides HTTPS
-      sameSite: "none",
-      maxAge: 10 * 24 * 60 * 60 * 1000
-    });
+  httpOnly: true,
+  sameSite: "none", // Required because Frontend (Localhost) != Backend (Render)
+  secure: true,     // Must be true for SameSite: none to work in Chrome
+  partitioned: true, // 👈 ADD THIS: Helps modern browsers handle cross-site cookies
+  maxAge: 10 * 24 * 60 * 60 * 1000
+});
+
 
     // Update Last Login
     await db
