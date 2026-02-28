@@ -165,6 +165,7 @@ export const loginUser = async (req, res) => {
 
       res.cookie("token_ux", token, {
           httpOnly: true,
+          secure: true, // Keep this true as Render provides HTTPS
           sameSite: "none", // Keep this none for cross-origin
           maxAge: 10 * 24 * 60 * 60 * 1000
       });
