@@ -8,6 +8,7 @@ import {
   employeeRegistrationSchema,
   employeeLoginSchema,
 } from "../validations/employeeValidator.js";
+import { forgotPasswordSchema } from "../validations/userValidator.js";
 import { generateToken } from "../utils/generateTokens.js";
 
 // ================= REGISTER EMPLOYEE (ADMIN ONLY) =================
@@ -191,4 +192,130 @@ export const logoutEmployee = async (req, res) => {
     success: true,
     message: "Employee Logout",
   });
+};
+
+
+// ================= PUBLIC PROFILE BY USERNAME =================
+export const getEmployeeProfileByUsername = async (req, res) => {
+  try {
+    const { username } = req.params;
+    const user = await db
+      .select({
+        username: userTable.username,
+        email: userTable.email,
+        phonenumber: userTable.phonenumber,
+        profile_image: userTable.profile_image,
+      })
+      .from(userTable)
+      .where(eq(userTable.username, username))
+      .limit(1);
+
+    if (!user.length) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: user[0],
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// ================= UPDATE PROFILE IMAGE =================
+export const updateProfileImage = async (req, res) => {
+  try {
+    const employeeId = req.employee.id; // from isEmployeeLoggedIn
+    const newImage = req.file?.filename;
+
+    if (!newImage) {
+      return res.status(400).json({ success: false, message: "No image uploaded" });
+    }
+
+    await db
+      .update(userTable)
+      .set({ profile_image: newImage })
+      .where(eq(userTable.id, employeeId));
+
+    return res.status(200).json({
+      success: true,
+      message: "Profile image updated!",
+      imageUrl: `/image/employeeimage/${newImage}`
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// ================= FORGOT PASSWORD =================
+export const forgotPassword = async (req, res) => {
+  try {
+    const result = forgotPasswordSchema.safeParse(req.body);
+
+    if (!result.success) {
+      return res.status(400).json({
+        success: false,
+        errors: result.error.flatten().fieldErrors,
+      });
+    }
+
+    const { email, password } = result.data;
+
+    const users = await db
+      .select({ id: userTable.id })
+      .from(userTable)
+      .where(eq(userTable.email, email))
+      .limit(1);
+
+    if (!users.length) {
+      return res.status(404).json({
+        success: false,
+        message: "Email not found",
+      });
+    }
+    const userId = users[0].id;
+
+    bcrypt.genSalt(10, function (err, salt) {
+      if (err) {
+        return res.status(500).json({
+          success: false,
+          message: err.message,
+        });
+      }
+
+      bcrypt.hash(password, salt, async function (err, hash) {
+        if (err) {
+          return res.status(500).json({
+            success: false,
+            message: err.message,
+          });
+        }
+
+        try {
+          await db
+            .update(userTable)
+            .set({ password: hash })
+            .where(eq(userTable.id, userId));
+
+          return res.status(200).json({
+            success: true,
+            message: "Password updated successfully",
+          });
+        } catch (dbErr) {
+          return res.status(500).json({
+            success: false,
+            message: dbErr.message,
+          });
+        }
+      });
+    });
+
+  } catch (err) {
+    console.error("Forgot Password Error:", err);
+    return res.status(500).json({
+      success: false,
+      message: "Internal Server Error",
+    });
+  }
 };
