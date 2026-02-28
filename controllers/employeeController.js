@@ -151,8 +151,8 @@ export const loginEmployee = async (req, res) => {
     //  COOKIE
     res.cookie("token_ex", token_ex, {
       httpOnly: true,
+      secure: true, // Keep this true as Render provides HTTPS
       sameSite: "none",
-      secure: true, // Only true on HTTPS    
       maxAge: 10 * 24 * 60 * 60 * 1000
     });
 
