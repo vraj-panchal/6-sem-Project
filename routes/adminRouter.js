@@ -9,7 +9,7 @@ import {
 import { isAdminLoggedIn } from "../middlewares/isAdminLoggedIn.js";
 import { adminImageUpload } from "../middlewares/upload.js";
 import { productImageUpload } from "../middlewares/upload.js";
-import { addProduct, listProducts, updateProduct, deleteProduct } from "../controllers/productController.js";
+import { addProduct, getAdminProductList, updateProduct, deleteProduct } from "../controllers/productController.js";
 
 import { listCategories, addCategory, updateCategory, deleteCategory } from "../controllers/categoriesController.js";
 import { listBatches,listallBatches, createProductBatch, updateBatch, deactivateBatch, adjustBatchStock } from "../controllers/productbatchController.js";
@@ -53,19 +53,7 @@ router.get("/profile", isAdminLoggedIn, (req, res) => {
   });
 });
 
-// Manage Tax
 
-// List Taxes
-router.get("/taxes", isAdminLoggedIn,listTaxes);
-
-// Add Tax
-router.post("/taxes/add", isAdminLoggedIn,addTax);
-
-// Update Tax
-router.put("/taxes/update/:id", isAdminLoggedIn,updateTax);
-
-// Delete Tax
-router.delete("/taxes/delete/:id", isAdminLoggedIn,deleteTax);
 
 
 
@@ -84,27 +72,13 @@ router.put("/categories/update/:id", isAdminLoggedIn,updateCategory);
 router.delete("/categories/delete/:id", isAdminLoggedIn,deleteCategory);
 
 
-//------------------------------------------------------------
-// Manage Products
-//------------------------------------------------------------
-// List Products
-router.get("/products",isAdminLoggedIn,listProducts);
-
-//2️⃣ Add Product
-router.post("/products/add", isAdminLoggedIn,productImageUpload.single("imageUrl"),addProduct);
-
-//3️⃣ Update Product
-router.put("/products/update/:id", isAdminLoggedIn,productImageUpload.single("imageUrl"),updateProduct);
-
-// Delete Product
-router.delete("/products/delete/:id", isAdminLoggedIn,deleteProduct);
-
 
 //------------------------------------------------------------
 // Manage Products
 //------------------------------------------------------------
 // List Products
-router.get("/products",isAdminLoggedIn,listProducts);
+router.get("/products",isAdminLoggedIn,getAdminProductList);
+
 
 //2️⃣ Add Product
 router.post("/products/add", isAdminLoggedIn,productImageUpload.single("imageUrl"),addProduct);

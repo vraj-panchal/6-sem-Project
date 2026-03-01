@@ -1,10 +1,10 @@
 import express from "express";
 import multer from "multer";
 import dotenv from "dotenv";
-import { registerUser, loginUser, logoutUser } from "../controllers/userController.js";
+import { registerUser, loginUser, logoutUser,getDashboard, getUserProfile,getUserProfileByUsername } from "../controllers/userController.js";
 import { isUserLoggedIn } from "../middlewares/isUserLoggedIn.js";
 import { userImageUpload } from "../middlewares/upload.js";
-import { listProducts } from "../controllers/productController.js";
+import { listProductsWithPricing } from "../controllers/productController.js";
 
 dotenv.config();
 
@@ -40,17 +40,14 @@ router.get("/profile", isUserLoggedIn, (req, res) => {
   });
 });
 
-router.get("/products",isUserLoggedIn,listProducts);
 
-<<<<<<< HEAD
-export default router;
-=======
+
 
 router.get("/dashboard", isUserLoggedIn, getDashboard);
 
 router.get("/profile", isUserLoggedIn, getUserProfile);
 
-// router.get("/products",isUserLoggedIn,listProducts);
+router.get("/products",isUserLoggedIn,listProductsWithPricing);
 
 
 
@@ -58,4 +55,3 @@ router.get("/profile", isUserLoggedIn, getUserProfile);
 router.get("/:username", getUserProfileByUsername);
 
 export default router;
->>>>>>> 49d2552 (Added product and batch logic)
