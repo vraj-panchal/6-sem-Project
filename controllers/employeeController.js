@@ -190,12 +190,20 @@ export const loginEmployee = async (req, res) => {
 
 // ================= LOGOUT EMPLOYEE =================
 export const logoutEmployee = async (req, res) => {
+  // res.cookie("token_ex", "", {
+  //   httpOnly: true,
+  //   expires: new Date(0),
+  //   sameSite: "none",
+  //   secure: true,
+  // });
+
   res.cookie("token_ex", "", {
-    httpOnly: true,
-    expires: new Date(0),
-    sameSite: "none",
-    secure: true,
-  });
+  httpOnly: true,
+  secure: true, 
+  sameSite: "none",
+  path: "/", // 👈 Very important!
+  expires: new Date(0), 
+});
 
   return res.status(200).json({
     success: true,
