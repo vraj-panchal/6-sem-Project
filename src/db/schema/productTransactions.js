@@ -32,24 +32,18 @@ export const productTransactionsTable = pgTable("product_transactions", {
 
   transactionType: transactionTypeEnum("transaction_type").notNull(),
 
-  quantity: decimal("quantity", { precision: 12, scale: 2 }).notNull(),
+  quantity: integer("quantity").notNull(),
 
-  previousStock: decimal("previous_stock", {
-    precision: 12,
-    scale: 2,
-  }),
+  previousStock: integer("previous_stock").notNull(),
 
-  newStock: decimal("new_stock", {
-    precision: 12,
-    scale: 2,
-  }),
+  newStock: integer("new_stock").notNull(),
 
   performedBy: bigint("performed_by", { mode: "number" })
     .references(() => userTable.id, {
       onDelete: "set null",
     }),
 
-  remarks: text("remarks"),
+  remarks: text("remarks").notNull(),
 
   createdAt: timestamp("created_at")
     .defaultNow()

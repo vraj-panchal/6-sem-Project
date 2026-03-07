@@ -25,7 +25,7 @@ export const listBatches = async (req, res) => {
     const batches = await db.select().from(productBatchesTable).where(eq(productBatchesTable.productId, Number(id)));
 
     if (!batches.length) {
-      return res.status(404).json({
+      return res.status(200).json({
         success: false,
         message: "No batches found for this product",
       });
@@ -65,7 +65,7 @@ export const listallBatches = async (req, res) => {
     const batches = await db.select().from(productBatchesTable);
 
     if (!batches.length) {
-      return res.status(404).json({
+      return res.status(200).json({
         success: false,
         message: "No batches found",
       });
@@ -173,9 +173,9 @@ export const createProductBatch = async (req, res) => {
       await tx.insert(productTransactionsTable).values({
         batchId,
         transactionType: "restock",
-        quantity: String(currentStock),
-        newStock: String(currentStock),
-        previousStock: "0",
+        quantity: currentStock,
+        newStock: currentStock,
+        previousStock: 0,
         performedBy: req.admin?.id || null,
         remarks: "Initial stock added during batch creation",
       });
@@ -198,20 +198,20 @@ export const createProductBatch = async (req, res) => {
 export const updateBatch = async (req, res) => {
   try {
     const { id } = req.params;
-    const { expiryDate, mrp, basePrice } = req.body;
+    const { expiryDate, mrp, basePrice, discount } = req.body;
 
-    const batch = await db
+    const updatedBatch = await db
       .update(productBatchesTable)
       .set({
-        expiryDate,
-        mrp,
-        discount,
-        basePrice,
+        ...(expiryDate !== undefined && { expiryDate }),
+        ...(mrp !== undefined && { mrp }),
+        ...(basePrice !== undefined && { basePrice }),
+        ...(discount !== undefined && { discount }),
       })
       .where(eq(productBatchesTable.id, Number(id)))
       .returning();
 
-    if (!batch.length) {
+    if (!updatedBatch.length) {
       return res.status(404).json({
         success: false,
         message: "Batch not found",
@@ -221,13 +221,12 @@ export const updateBatch = async (req, res) => {
     return res.status(200).json({
       success: true,
       message: "Batch updated successfully",
-      data: batch[0],
+      data: updatedBatch[0],
     });
-
   } catch (error) {
     return res.status(500).json({
       success: false,
-      message: "Server Error",
+      message: "Internal Server Error",
     });
   }
 };
@@ -290,17 +289,14 @@ export const adjustBatchStock = async (req, res) => {
         .limit(1);
 
       if (!batch.length) {
-        return res.status(404).json({
-          success: false,
-          message: "Batch not found",
-        });
+        throw new Error("Batch not found");
       }
 
       const previousStock = Number(batch[0].currentStock);
       const total = newStock; // directly set
       const difference = newStock - previousStock;
 
-      // const total = newStock + previousStock;
+     
 
 
       // 3️⃣ Update stock
@@ -308,30 +304,21 @@ export const adjustBatchStock = async (req, res) => {
         .update(productBatchesTable)
         .set({ currentStock: total })
         .where(eq(productBatchesTable.id, Number(id)));
-      // await tx
-      //   .update(productBatchesTable)
-      //   .set({ currentStock: total })
-      //   .where(eq(productBatchesTable.id, Number(id)));
+      
 
       // 4️⃣ Insert transaction log
       await tx.insert(productTransactionsTable).values({
         batchId: Number(id),
         transactionType: "adjustment",
         quantity: difference, // positive or negative
-        previousStock: String(previousStock),
+        previousStock: previousStock,
         newStock: total,
         performedBy: req.admin?.id || null,
         remarks,
       });
-      // await tx.insert(productTransactionsTable).values({
-      //   batchId: Number(id),
-      //   transactionType: "adjustment",
-      //   quantity: newStock,
-      //   previousStock: String(previousStock),
-      //   newStock: total,
-      //   performedBy: req.admin?.id || null,
-      //   remarks,
-      // });
+      
+
+     
     });
 
     return res.status(200).json({

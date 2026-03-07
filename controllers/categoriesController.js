@@ -1,4 +1,4 @@
-import { eq, and,ne } from "drizzle-orm";
+import { eq, and, ne } from "drizzle-orm";
 import { db } from "../config/db.js";
 import { categoriesTable } from "../src/db/schema/categories.js";
 import { createCategorySchema, updateCategorySchema } from "../validations/categoriesValidator.js";
@@ -6,31 +6,31 @@ import { createCategorySchema, updateCategorySchema } from "../validations/categ
 // List Categories
 export const listCategories = async (req, res) => {
 
-    try {
+  try {
 
-        const categories = await db.select().from(categoriesTable);
+    const categories = await db.select().from(categoriesTable);
 
-        if (categories.length === 0) {
-            return res.status(404).json({
-                success: false,
-                message: "No categories found"
-            });
-        }
-
-        else {
-            return res.status(200).json({
-                success: true,
-                data: categories
-            });
-        }
-
-    } catch (error) {
-        return res.status(500).json({
-            success: false,
-            message: "Server Error",
-            error: error.message
-        });
+    if (categories.length === 0) {
+      return res.status(200).json({
+        success: false,
+        message: "No categories found"
+      });
     }
+
+    else {
+      return res.status(200).json({
+        success: true,
+        data: categories
+      });
+    }
+
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Server Error",
+      error: error.message
+    });
+  }
 
 };
 
@@ -153,7 +153,7 @@ export const updateCategory = async (req, res) => {
       });
     }
 
-    const { categoryName, allowedUnits } = result.data;
+    const { categoryName, allowedUnits, isActive } = result.data;
 
     // Check if category exists
     const category = await db
@@ -196,6 +196,7 @@ export const updateCategory = async (req, res) => {
       .set({
         ...(categoryName && { categoryName }),
         ...(allowedUnits && { allowedUnits }),
+        ...(isActive !== undefined && { isActive }),
       })
       .where(eq(categoriesTable.id, Number(id)))
       .returning();
@@ -293,48 +294,49 @@ export const updateCategory = async (req, res) => {
 // };
 
 //4️⃣ Delete Category
-export const deleteCategory = async (req, res) => { 
-    try{
+export const deleteCategory = async (req, res) => {
+  try {
     const { id } = req.params;
 
     //check if category exists
-    const category =  await db
-        .select()
-        .from(categoriesTable)
-        .where(eq(categoriesTable.id, Number(id)))
-        .limit(1);
+    const category = await db
+      .select()
+      .from(categoriesTable)
+      .where(eq(categoriesTable.id, Number(id)))
+      .limit(1);
 
     if (!category.length) {
-        return res.status(404).json({
-            success: false,
-            message: "Category not found"
-        });
+      return res.status(404).json({
+        success: false,
+        message: "Category not found"
+      });
     }
 
     //delete category
     const deletedcatrgory = await db
-        .delete(categoriesTable)
-        .where(eq(categoriesTable.id, Number(id))).returning();   
+      .update(categoriesTable)
+      .set({ isActive: false })
+      .where(eq(categoriesTable.id, Number(id))).returning();
 
-        if(!deletedcatrgory.length){
-            return res.status(500).json({
-                success: false,
-                message: "Category deletion failed"
-            });
-        }
-
-        return res.status(200).json({
-            success: true,
-            message: "Category deleted successfully"
-        });
-
-    }catch(error){
-        return res.status(500).json({
-            success: false,
-            message: "Server Error",
-            error: error.message
-        });
+    if (!deletedcatrgory.length) {
+      return res.status(500).json({
+        success: false,
+        message: "Category deletion failed"
+      });
     }
+
+    return res.status(200).json({
+      success: true,
+      message: "Category deleted successfully"
+    });
+
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Server Error",
+      error: error.message
+    });
+  }
 };
 
 

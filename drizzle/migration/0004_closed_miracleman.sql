@@ -1,1 +1,0 @@
-ALTER TABLE "product_batches" ADD COLUMN "discount" numeric(5, 2) DEFAULT '0' NOT NULL;

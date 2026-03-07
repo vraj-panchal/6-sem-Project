@@ -1,4 +1,4 @@
-import { eq, and, gt, asc, sql, count } from "drizzle-orm";
+import { eq, and, gt, asc, sql, count, ne } from "drizzle-orm";
 import { db } from "../config/db.js";
 import { productsTable } from "../src/db/schema/product.js";
 import { productBatchesTable } from "../src/db/schema/productBatches.js";
@@ -320,7 +320,8 @@ export const addProduct = async (req, res) => {
     } = result.data;
 
     // convert isActive properly
-    if (isActive === "0") isActive = false;
+    // if (isActive === "0") isActive = false;
+    isActive = isActive === true || isActive === "true" || isActive === 1;
 
     // ✅ 1️⃣ Check category exists
     const category = await db
@@ -339,10 +340,10 @@ export const addProduct = async (req, res) => {
     // ✅ 2️⃣ Validate unit against allowedUnits
     const allowedUnits = category[0].allowedUnits;
 
-    if (!allowedUnits.includes(unit)) {
+    if (!allowedUnits.includes(baseUnit)) {
       return res.status(400).json({
         success: false,
-        message: `Unit must be one of: ${allowedUnits.join(", ")}`,
+        message: `Base Unit must be one of: ${allowedUnits.join(", ")}`,
       });
     }
 
@@ -365,7 +366,7 @@ export const addProduct = async (req, res) => {
       .insert(productsTable)
       .values({
         categoryId,
-        createdBy: req.admin.id,
+        createdBy: req.user.id,
         productName,
         brand,
         sku,
@@ -409,33 +410,35 @@ export const updateProduct = async (req, res) => {
       });
     }
 
-    const updatedFields = { ...result.data };
+    // const updatedFields = { ...result.data };
+    const { createdBy, ...safeData } = result.data;
+    const updatedFields = { ...safeData };
 
     // Add imageUrl if file is uploaded
     if (req.file) {
       updatedFields.imageUrl = req.file.path;
     }
 
-    const {
-      categoryId,
-      createdBy,
-      name,
-      sku,
-      price,
-      discountPercent,
-      description,
-      stockQuantity,
-      cgstPercent,
-      sgstPercent,
-      igstPercent,
-      isActive,
-    } = result.data;
+    // const {
+    //   categoryId,
+    //   createdBy,
+    //   name,
+    //   sku,
+    //   price,
+    //   discountPercent,
+    //   description,
+    //   stockQuantity,
+    //   cgstPercent,
+    //   sgstPercent,
+    //   igstPercent,
+    //   isActive,
+    // } = result.data;
 
 
 
     // check product exists
     const product = await db
-      .select()
+      .select({ id: productsTable.id })
       .from(productsTable)
       .where(eq(productsTable.id, Number(id)))
       .limit(1);
@@ -446,11 +449,11 @@ export const updateProduct = async (req, res) => {
       });
     }
     // check category exists (if provided)
-    if (categoryId) {
+    if (updatedFields.categoryId) {
       const category = await db
         .select()
         .from(categoriesTable)
-        .where(eq(categoriesTable.id, categoryId))
+        .where(eq(categoriesTable.id, updatedFields.categoryId))
         .limit(1);
       if (!category.length) {
         return res.status(404).json({
@@ -461,13 +464,13 @@ export const updateProduct = async (req, res) => {
     }
 
     // check duplicate SKU      
-    if (sku) {
+    if (updatedFields.sku) {
       const existingSku = await db
         .select()
         .from(productsTable)
         .where(
           and(
-            eq(productsTable.sku, sku),
+            eq(productsTable.sku, updatedFields.sku),
             ne(productsTable.id, Number(id))
           )
         )
@@ -528,7 +531,8 @@ export const deleteProduct = async (req, res) => {
 
     // delete product
     const deletedproduct = await db
-      .delete(productsTable)
+      .update(productsTable)
+      .set({ isActive: false }) // soft delete
       .where(eq(productsTable.id, Number(id))).returning();
 
     if (!deletedproduct.length) {

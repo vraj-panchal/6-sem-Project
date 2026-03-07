@@ -12,6 +12,8 @@ export const createCategorySchema = z.object({
       z.string().min(1, "Unit cannot be empty")
     )
     .min(1, "At least one unit is required"),
+    
+  isActive: z.boolean().optional()
 });
 
 // Update Category Validation Schema

@@ -3,6 +3,7 @@ import {
   serial,
   varchar,
   jsonb,
+  boolean,
   timestamp,
 } from "drizzle-orm/pg-core";
 
@@ -24,4 +25,7 @@ export const categoriesTable = pgTable("categories", {
   updatedAt: timestamp("updated_at", { precision: 3 })
     .defaultNow()
     .notNull(),
+
+  isActive: boolean("is_active")
+        .default(true),
 });
