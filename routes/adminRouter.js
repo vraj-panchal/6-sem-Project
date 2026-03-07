@@ -4,15 +4,26 @@ import {
   registerAdmin,
   loginAdmin,
   logoutAdmin,
+  forgotAdminPassword,
+  getAdminProfileByUsername,
+  updateProfileImage,
+  getAllUsers,
+  getAllEmployees,
+  updateUserStatus,
 } from "../controllers/adminController.js";
 
 import { isAdminLoggedIn } from "../middlewares/isAdminLoggedIn.js";
 import { adminImageUpload } from "../middlewares/upload.js";
+<<<<<<< HEAD
 import { productImageUpload } from "../middlewares/upload.js";
 import { addProduct, getAdminProductList, updateProduct, deleteProduct } from "../controllers/productController.js";
 
 import { listCategories, addCategory, updateCategory, deleteCategory } from "../controllers/categoriesController.js";
 import { listBatches,listallBatches, createProductBatch, updateBatch, deactivateBatch, adjustBatchStock } from "../controllers/productbatchController.js";
+=======
+
+import { listCategories, addCategory, updateCategory, deleteCategory } from "../controllers/categoriesController.js";
+>>>>>>> origin/main
 
 
 
@@ -23,9 +34,20 @@ dotenv.config(); // <- must be at the very top
 
 const router = express.Router();
 
-router.get("/", (req,res)=>{
-    res.send("Hey Admin Route Working ....");
+router.get("/", (req, res) => {
+  res.send("Hey Admin Route Working ....");
 })
+
+
+
+// Manage Users (NEW)
+router.get("/users/all", isAdminLoggedIn, getAllUsers);
+router.get("/employees/all", isAdminLoggedIn, getAllEmployees);
+router.put("/users/status/:id", isAdminLoggedIn, upload.none(), updateUserStatus);
+
+
+// Protected route to update the image
+router.put("/profile/update-image", isAdminLoggedIn, upload.single("profile_image"), updateProfileImage);
 
 // router.post("/register", registerAdmin);
 router.post(
@@ -34,9 +56,12 @@ router.post(
   registerAdmin
 );
 
-router.post("/login",upload.none(), loginAdmin);
+router.post("/login", upload.none(), loginAdmin);
 
-router.post("/logout", isAdminLoggedIn, logoutAdmin);
+router.post("/logout", logoutAdmin);
+
+router.put("/forgot-password", upload.none(), forgotAdminPassword);
+// router.post("/reset-password/:id/:token", resetAdminPassword);
 
 router.get("/dashboard", isAdminLoggedIn, (req, res) => {
   res.status(200).json({
@@ -49,7 +74,7 @@ router.get("/dashboard", isAdminLoggedIn, (req, res) => {
 router.get("/profile", isAdminLoggedIn, (req, res) => {
   res.status(200).json({
     success: true,
-    data: req.user,   
+    data: req.admin,
   });
 });
 
@@ -60,15 +85,16 @@ router.get("/profile", isAdminLoggedIn, (req, res) => {
 // Manage Categories
 
 // list of categories
-router.get("/categories", isAdminLoggedIn,listCategories);
+router.get("/categories", isAdminLoggedIn, listCategories);
 
 // add category
-router.post("/categories/add", isAdminLoggedIn,addCategory);
+router.post("/categories/add", isAdminLoggedIn, upload.none(), addCategory);
 
 // update category
-router.put("/categories/update/:id", isAdminLoggedIn,updateCategory);
+router.put("/categories/update/:id", isAdminLoggedIn, upload.none(), updateCategory);
 
 // delete category
+<<<<<<< HEAD
 router.delete("/categories/delete/:id", isAdminLoggedIn,deleteCategory);
 
 
@@ -88,6 +114,9 @@ router.put("/products/update/:id", isAdminLoggedIn,productImageUpload.single("im
 
 // Delete Product
 router.delete("/products/delete/:id", isAdminLoggedIn,deleteProduct);
+=======
+router.delete("/categories/delete/:id", isAdminLoggedIn, deleteCategory);
+>>>>>>> origin/main
 
 
 //------------------------------------------------------------
@@ -112,4 +141,8 @@ router.get("/batches", isAdminLoggedIn, listallBatches);
 //🟥Adjust stock
 router.post("/batches/:id/adjuststock", isAdminLoggedIn, adjustBatchStock);
 
+
+
+// Publicly viewable profile (e.g., domain.com/vraj-panchal)
+router.get("/profile/:username", getAdminProfileByUsername);
 export default router;

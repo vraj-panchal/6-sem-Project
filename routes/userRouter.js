@@ -1,10 +1,18 @@
 import express from "express";
 import multer from "multer";
 import dotenv from "dotenv";
+<<<<<<< HEAD
 import { registerUser, loginUser, logoutUser,getDashboard, getUserProfile,getUserProfileByUsername } from "../controllers/userController.js";
 import { isUserLoggedIn } from "../middlewares/isUserLoggedIn.js";
 import { userImageUpload } from "../middlewares/upload.js";
 import { listProductsWithPricing } from "../controllers/productController.js";
+=======
+import { registerUser, loginUser, logoutUser, updateUserProfile, forgotPassword, getDashboard, getUserProfile, getUserProfileByUsername, updateProfileImage } from "../controllers/userController.js";
+import { isUserLoggedIn } from "../middlewares/isUserLoggedIn.js";
+import { userImageUpload } from "../middlewares/upload.js";
+
+
+>>>>>>> origin/main
 
 dotenv.config();
 
@@ -23,23 +31,13 @@ router.post(
 
 router.post("/login", upload.none(), loginUser);
 
-router.post("/logout", isUserLoggedIn, logoutUser);
+router.post("/logout", logoutUser);
 
-router.get("/dashboard", isUserLoggedIn, (req, res) => {
-  res.status(200).json({
-    success: true,
-    message: "Welcome to User Dashboard",
-    user: req.user,
-  });
-});
+router.put("/updateUserProfile/:id", isUserLoggedIn, userImageUpload.single("profile_image"), updateUserProfile)
 
-router.get("/profile", isUserLoggedIn, (req, res) => {
-  res.status(200).json({
-    success: true,
-    data: req.user,
-  });
-});
+router.put("/profile/update-image", isUserLoggedIn, userImageUpload.single("profile_image"), updateProfileImage);
 
+<<<<<<< HEAD
 
 
 
@@ -48,6 +46,19 @@ router.get("/dashboard", isUserLoggedIn, getDashboard);
 router.get("/profile", isUserLoggedIn, getUserProfile);
 
 router.get("/products",isUserLoggedIn,listProductsWithPricing);
+
+
+
+// Public Profile
+router.get("/:username", getUserProfileByUsername);
+=======
+router.put("/forgot-password", upload.none(), forgotPassword);
+>>>>>>> origin/main
+
+
+router.get("/dashboard", isUserLoggedIn, getDashboard);
+
+router.get("/profile", isUserLoggedIn, getUserProfile);
 
 
 

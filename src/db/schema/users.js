@@ -13,5 +13,7 @@ export const userTable = pgTable("users", {
   status_id: integer().references(() => user_status.id).notNull(),
 
   created_at: timestamp().defaultNow().notNull(),   //  OK
-  updated_at: timestamp().defaultNow().notNull(),   //  REMOVE onUpdateNow()
+  updated_at: timestamp().defaultNow().$onUpdate(() => new Date()).notNull(),
+  last_login: timestamp(), // New field
+
 });

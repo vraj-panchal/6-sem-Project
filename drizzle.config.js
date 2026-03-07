@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import { defineConfig } from "drizzle-kit";
 
 // export default defineConfig({
@@ -22,9 +23,11 @@ export default defineConfig({
   out: "./drizzle/migration",
   dbCredentials: {
     url: process.env.DATABASE_URL,
-    ssl: process.env.NODE_ENV === "production"
-      ? { rejectUnauthorized: false }
-      : false,
+    ssl: {
+      rejectUnauthorized: false, // This allows the connection to bypass Render's certificate check
+    },
+    connectionTimeoutMillis: 120000,
+    max: 1,
   },
   verbose: true,
   strict: true,
