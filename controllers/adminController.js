@@ -328,7 +328,7 @@ export const loginAdmin = async (req, res) => {
     res.cookie("token_ax", token, {
       httpOnly: true,
       sameSite: "none",
-      secure: true, // Only true on HTTPS    
+      secure: false, // Only true on HTTPS    
       maxAge: 10 * 24 * 60 * 60 * 1000
     });
 
@@ -347,10 +347,20 @@ export const loginAdmin = async (req, res) => {
         role_id: adminData.role_id,
       },
     });
-  } catch (err) {
-    console.error("LoginAdmin Error:", err.message);
-    return res.status(500).json({ success: false, message: err.message });
-  }
+  } 
+  catch (error) {
+   console.error("LoginAdmin Error:", error.message);
+  console.error(error);
+
+  return res.status(500).json({
+    success: false,
+    message: "Internal Server Error",
+  });
+}
+  //catch (err) {
+  //   console.error("LoginAdmin Error:", err.message);
+  //   return res.status(500).json({ success: false, message: err.message });
+  // }
 };
 
 // --------------------- LOGOUT ADMIN ---------------------

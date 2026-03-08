@@ -4,6 +4,8 @@ import { productsTable } from "../src/db/schema/product.js";
 import { productBatchesTable } from "../src/db/schema/productBatches.js";
 import { categoriesTable } from "../src/db/schema/categories.js";
 import { createProductSchema, updateProductSchema } from "../validations/productValidator.js";
+import { deactivateExpiredBatches } from "../utils/expiryproducts.js";
+import { deactivateExpiredProduct } from "../utils/expiryproducts.js";       
 
 
 
@@ -13,6 +15,10 @@ export const listProductsWithPricing = async (req, res) => {
     const page = Math.max(parseInt(req.query.page) || 1, 1);
     const limit = Math.min(Math.max(parseInt(req.query.limit) || 10, 1), 100);
     const offset = (page - 1) * limit;
+
+    await deactivateExpiredBatches();
+    await deactivateExpiredProduct();
+
 
     // ✅ Step 1: Rank batches (nearest expiry per product)
     const rankedBatches = db
@@ -136,6 +142,9 @@ export const getAdminProductList = async (req, res) => {
     const limit = Math.min(Math.max(parseInt(req.query.limit) || 10, 1), 100);
     const offset = (page - 1) * limit;
 
+     await deactivateExpiredBatches();
+     await deactivateExpiredProduct();
+
     // ✅ 1. Get total product count (admin sees all products)
     const totalCountResult = await db
       .select({ value: count(productsTable.id) })
@@ -154,6 +163,8 @@ export const getAdminProductList = async (req, res) => {
         data: [],
       });
     }
+
+   
 
     // ✅ 2. Fetch paginated grouped products
     const products = await db
@@ -321,7 +332,7 @@ export const addProduct = async (req, res) => {
 
     // convert isActive properly
     // if (isActive === "0") isActive = false;
-    isActive = isActive === true || isActive === "true" || isActive === 1;
+  isActive = ["true", "1", true, 1].includes(isActive);
 
     // ✅ 1️⃣ Check category exists
     const category = await db
@@ -366,7 +377,7 @@ export const addProduct = async (req, res) => {
       .insert(productsTable)
       .values({
         categoryId,
-        createdBy: req.user.id,
+        createdBy: req.admin.id,
         productName,
         brand,
         sku,

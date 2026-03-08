@@ -1,18 +1,15 @@
 import express from "express";
 import multer from "multer";
 import dotenv from "dotenv";
-<<<<<<< HEAD
-import { registerUser, loginUser, logoutUser,getDashboard, getUserProfile,getUserProfileByUsername } from "../controllers/userController.js";
-import { isUserLoggedIn } from "../middlewares/isUserLoggedIn.js";
-import { userImageUpload } from "../middlewares/upload.js";
+// import { registerUser, loginUser, logoutUser,getDashboard, getUserProfile,getUserProfileByUsername } from "../controllers/userController.js";
+// import { isUserLoggedIn } from "../middlewares/isUserLoggedIn.js";
+// import { userImageUpload } from "../middlewares/upload.js";
 import { listProductsWithPricing } from "../controllers/productController.js";
-=======
 import { registerUser, loginUser, logoutUser, updateUserProfile, forgotPassword, getDashboard, getUserProfile, getUserProfileByUsername, updateProfileImage } from "../controllers/userController.js";
 import { isUserLoggedIn } from "../middlewares/isUserLoggedIn.js";
 import { userImageUpload } from "../middlewares/upload.js";
 
 
->>>>>>> origin/main
 
 dotenv.config();
 
@@ -37,7 +34,6 @@ router.put("/updateUserProfile/:id", isUserLoggedIn, userImageUpload.single("pro
 
 router.put("/profile/update-image", isUserLoggedIn, userImageUpload.single("profile_image"), updateProfileImage);
 
-<<<<<<< HEAD
 
 
 
@@ -51,9 +47,7 @@ router.get("/products",isUserLoggedIn,listProductsWithPricing);
 
 // Public Profile
 router.get("/:username", getUserProfileByUsername);
-=======
 router.put("/forgot-password", upload.none(), forgotPassword);
->>>>>>> origin/main
 
 
 router.get("/dashboard", isUserLoggedIn, getDashboard);

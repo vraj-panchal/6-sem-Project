@@ -14,16 +14,11 @@ import {
 
 import { isAdminLoggedIn } from "../middlewares/isAdminLoggedIn.js";
 import { adminImageUpload } from "../middlewares/upload.js";
-<<<<<<< HEAD
 import { productImageUpload } from "../middlewares/upload.js";
 import { addProduct, getAdminProductList, updateProduct, deleteProduct } from "../controllers/productController.js";
 
 import { listCategories, addCategory, updateCategory, deleteCategory } from "../controllers/categoriesController.js";
 import { listBatches,listallBatches, createProductBatch, updateBatch, deactivateBatch, adjustBatchStock } from "../controllers/productbatchController.js";
-=======
-
-import { listCategories, addCategory, updateCategory, deleteCategory } from "../controllers/categoriesController.js";
->>>>>>> origin/main
 
 
 
@@ -94,7 +89,6 @@ router.post("/categories/add", isAdminLoggedIn, upload.none(), addCategory);
 router.put("/categories/update/:id", isAdminLoggedIn, upload.none(), updateCategory);
 
 // delete category
-<<<<<<< HEAD
 router.delete("/categories/delete/:id", isAdminLoggedIn,deleteCategory);
 
 
@@ -114,9 +108,6 @@ router.put("/products/update/:id", isAdminLoggedIn,productImageUpload.single("im
 
 // Delete Product
 router.delete("/products/delete/:id", isAdminLoggedIn,deleteProduct);
-=======
-router.delete("/categories/delete/:id", isAdminLoggedIn, deleteCategory);
->>>>>>> origin/main
 
 
 //------------------------------------------------------------

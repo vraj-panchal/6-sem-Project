@@ -1,9 +1,5 @@
 {
-<<<<<<< HEAD
   "id": "4b2f4b92-e884-4320-8bda-5dff438fa1f1",
-=======
-  "id": "8aad6ace-ea0f-4440-9ecd-541a18644807",
->>>>>>> origin/main
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -278,7 +274,6 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-<<<<<<< HEAD
     "public.products": {
       "name": "products",
       "schema": "",
@@ -435,8 +430,6 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-=======
->>>>>>> origin/main
     "public.roles": {
       "name": "roles",
       "schema": "",
