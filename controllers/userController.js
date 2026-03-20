@@ -1,5 +1,3 @@
-
-
 import { eq, or } from "drizzle-orm";
 import bcrypt from "bcrypt";
 import { db } from "../config/db.js";
@@ -96,10 +94,10 @@ export const registerUser = async (req, res) => {
 
         //  Set cookie
         res.cookie("token_ux", token, {
-          httpOnly: true,
-          maxAge: 10 * 24 * 60 * 60 * 1000,
-          sameSite: "none",
-          secure: process.env.NODE_ENV === "production",
+            httpOnly: true,
+            secure: true, // Keep this true as Render provides HTTPS
+            sameSite: "none", // Keep this none for cross-origin
+            maxAge: 10 * 24 * 60 * 60 * 1000
         });
 
         return res.status(201).json({
@@ -166,10 +164,10 @@ export const loginUser = async (req, res) => {
       const token = generateToken(Userpass);
 
       res.cookie("token_ux", token, {
-        httpOnly: true,
-        maxAge: 10 * 24 * 60 * 60 * 1000,
-        sameSite: "none",
-        secure: process.env.NODE_ENV === "production",
+          httpOnly: true,
+          secure: true, // Keep this true as Render provides HTTPS
+          sameSite: "none", // Keep this none for cross-origin
+          maxAge: 10 * 24 * 60 * 60 * 1000
       });
 
       // Update Last Login
@@ -200,10 +198,10 @@ export const loginUser = async (req, res) => {
 // ================= LOGOUT =================
 export const logoutUser = async (req, res) => {
   res.cookie("token_ux", "", {
-    httpOnly: true,
-    expires: new Date(0),
-    sameSite: "none",
-    secure: process.env.NODE_ENV === "production",
+      httpOnly: true,
+      sameSite: "none",
+      secure: true,
+      maxAge: 10 * 24 * 60 * 60 * 1000
   });
 
   return res.status(200).json({
