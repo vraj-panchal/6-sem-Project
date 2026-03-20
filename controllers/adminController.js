@@ -120,6 +120,42 @@ export const getAllUsers = async (req, res) => {
   }
 };
 
+// --------------------- GET ALL EMPLOYEES (ADMIN) ---------------------
+export const getAllEmployees = async (req, res) => {
+  try {
+    const employees = await db
+      .select({
+        id: userTable.id,
+        username: userTable.username,
+        email: userTable.email,
+        phonenumber: userTable.phonenumber,
+        profile_image: userTable.profile_image,
+        role: rolesTable.name,
+        status: user_status.name,
+        created_at: userTable.created_at,
+        last_login: userTable.last_login,
+      })
+      .from(userTable)
+      .innerJoin(rolesTable, eq(userTable.role_id, rolesTable.id))
+      .innerJoin(user_status, eq(userTable.status_id, user_status.id))
+      .where(eq(rolesTable.name, "employee")); // Only fetch employees
+
+    // Format dates for response
+    const formattedEmployees = employees.map((emp) => ({
+      ...emp,
+      created_at: formatDateIST(emp.created_at),
+      last_login: formatDateIST(emp.last_login),
+    }));
+
+    return res.status(200).json({
+      success: true,
+      data: formattedEmployees,
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
 // --------------------- UPDATE USER STATUS (BLOCK/UNBLOCK) ---------------------
 export const updateUserStatus = async (req, res) => {
   try {
