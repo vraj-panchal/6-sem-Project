@@ -103,7 +103,9 @@ export const registerUser = async (req, res) => {
 
         // Send Welcome Email
         // await sendWelcomeEmail(email, username);
+
         sendWelcomeEmail(email, username).catch(console.error);
+
         return res.status(201).json({
           success: true,
           message: "User Registered Successfully",

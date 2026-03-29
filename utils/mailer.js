@@ -45,16 +45,22 @@
 import nodemailer from "nodemailer";
 import dotenv from "dotenv";
 dotenv.config();
-// Create the transporter OUTSIDE the function so the connection is reused
-const transporter = nodemailer.createTransport({
-  service: "gmail",
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
-  },
-});
+
+// Lazily load transporter to guarantee process.env is fully loaded
+let transporter;
+
 export const sendWelcomeEmail = async (userEmail, username) => {
   try {
+    if (!transporter) {
+      transporter = nodemailer.createTransport({
+        service: "gmail",
+        auth: {
+          user: process.env.EMAIL_USER,
+          pass: process.env.EMAIL_PASS,
+        },
+      });
+    }
+
     const mailOptions = {
       from: process.env.EMAIL_USER,
       to: userEmail,
@@ -76,6 +82,7 @@ export const sendWelcomeEmail = async (userEmail, username) => {
         </div>
       `,
     };
+
     const info = await transporter.sendMail(mailOptions);
     console.log("Welcome email sent successfully: " + info.response);
     return true;
