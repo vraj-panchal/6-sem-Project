@@ -24,10 +24,10 @@ export const sendWelcomeEmail = async (userEmail, username) => {
 
     // Construct exactly what an email looks like behind the scenes (RFC 2822 format)
     const rawEmail = `From: "The Nest Official" <${process.env.EMAIL_USER}>
-        To: ${userEmail}
-        Subject: Welcome to Nest Official - Registration Successful
-        MIME-Version: 1.0
-        Content-Type: text/html; charset=utf-8
+To: ${userEmail}
+Subject: Welcome to Nest Official - Registration Successful
+MIME-Version: 1.0
+Content-Type: text/html; charset=utf-8
 
         <div style="font-family: Arial, sans-serif; padding: 20px; background-color: #f4f4f4;">
           <div style="background-color: #ffffff; padding: 30px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); max-width: 600px; margin: 0 auto; border-top: 4px solid #232f3e;">
