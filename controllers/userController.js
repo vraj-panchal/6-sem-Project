@@ -5,7 +5,7 @@ import { userTable } from "../src/db/schema/users.js";
 import { rolesTable } from "../src/db/schema/roles.js";
 import { user_status } from "../src/db/schema/user_status.js";
 import jwt from "jsonwebtoken";
-import { verifyOtpSchema } from "../validations/userValidator.js";
+import { userRegistrationSchema, userLoginSchema, updateUserSchema, forgotPasswordSchema, verifyOtpSchema } from "../validations/userValidator.js";
 import { generateToken } from "../utils/generateTokens.js";
 import { sendWelcomeEmail, sendLoginOTPEmail } from "../utils/mailer.js";
 
