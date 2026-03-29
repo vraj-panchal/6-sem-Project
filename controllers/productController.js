@@ -386,6 +386,8 @@ export const addProduct = async (req, res) => {
         description,
         imageUrl: req.file ? req.file.path : null,
         isActive,
+        createdAt: sql`NOW() AT TIME ZONE 'Asia/Kolkata'`,
+        updatedAt: null,
       })
       .returning();
 
@@ -493,7 +495,10 @@ export const updateProduct = async (req, res) => {
     // update product
     const updatedProduct = await db
       .update(productsTable)
-      .set(updatedFields)
+      .set({
+        ...updatedFields,
+        updatedAt: sql`NOW() AT TIME ZONE 'Asia/Kolkata'`
+      })
       .where(eq(productsTable.id, Number(id)))
       .returning();
 
