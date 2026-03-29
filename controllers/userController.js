@@ -95,15 +95,15 @@ export const registerUser = async (req, res) => {
 
         //  Set cookie
         res.cookie("token_ux", token, {
-            httpOnly: true,
-            secure: true, // Keep this true as Render provides HTTPS
-            sameSite: "none", // Keep this none for cross-origin
-            maxAge: 10 * 24 * 60 * 60 * 1000
+          httpOnly: true,
+          secure: true, // Keep this true as Render provides HTTPS
+          sameSite: "none", // Keep this none for cross-origin
+          maxAge: 10 * 24 * 60 * 60 * 1000
         });
 
         // Send Welcome Email
-        await sendWelcomeEmail(email, username);
-
+        // await sendWelcomeEmail(email, username);
+        sendWelcomeEmail(email, username).catch(console.error);
         return res.status(201).json({
           success: true,
           message: "User Registered Successfully",
@@ -168,10 +168,10 @@ export const loginUser = async (req, res) => {
       const token = generateToken(Userpass);
 
       res.cookie("token_ux", token, {
-          httpOnly: true,
-          secure: true, // Keep this true as Render provides HTTPS
-          sameSite: "none", // Keep this none for cross-origin
-          maxAge: 10 * 24 * 60 * 60 * 1000
+        httpOnly: true,
+        secure: true, // Keep this true as Render provides HTTPS
+        sameSite: "none", // Keep this none for cross-origin
+        maxAge: 10 * 24 * 60 * 60 * 1000
       });
 
       // Update Last Login
@@ -202,10 +202,10 @@ export const loginUser = async (req, res) => {
 // ================= LOGOUT =================
 export const logoutUser = async (req, res) => {
   res.cookie("token_ux", "", {
-      httpOnly: true,
-      sameSite: "none",
-      secure: true,
-      maxAge: 10 * 24 * 60 * 60 * 1000
+    httpOnly: true,
+    sameSite: "none",
+    secure: true,
+    maxAge: 10 * 24 * 60 * 60 * 1000
   });
 
   return res.status(200).json({
