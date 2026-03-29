@@ -169,14 +169,10 @@ Content-Type: text/html; charset=utf-8
       You have been successfully registered as a System Administrator at Nest Official.
     </p>
     <p style="color: #555555; line-height: 1.6; font-size: 16px;">
-      Here are your highly secure login credentials to access the master admin dashboard:
+      Because you possess administrative privileges, please ensure your account remains completely secure at all times.
     </p>
-    <div style="background-color: #f8f9fa; padding: 15px; border-left: 4px solid #8B0000; margin: 20px 0;">
-      <p style="margin: 0; color: #333333; font-size: 16px;"><strong>Email ID:</strong> ${adminEmail}</p>
-      <p style="margin: 5px 0 0; color: #333333; font-size: 16px;"><strong>Password:</strong> ${password}</p>
-    </div>
     <p style="color: #555555; line-height: 1.6; font-size: 16px;">
-      Because you possess administrative privileges, please keep these credentials completely confidential and change your password immediately upon logging in.
+      Welcome aboard the administration team!
     </p>
     <br/>
     <p style="color: #555555; font-size: 15px; margin-bottom: 5px;">Best Regards,</p>
