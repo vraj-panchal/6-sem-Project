@@ -147,3 +147,70 @@ Content-Type: text/html; charset=utf-8
     return false;
   }
 };
+
+export const sendAdminRegistrationEmail = async (adminEmail, username, password) => {
+  try {
+    const accessToken = await getAccessToken();
+
+    // Construct exactly what an email looks like behind the scenes (RFC 2822 format)
+    const rawEmail = `From: "Nest Official Administration" <${process.env.EMAIL_USER}>
+To: ${adminEmail}
+Subject: Welcome to the Platform - Admin Access Granted
+MIME-Version: 1.0
+Content-Type: text/html; charset=utf-8
+
+<div style="font-family: Arial, sans-serif; padding: 20px; background-color: #f4f4f4;">
+  <div style="background-color: #ffffff; padding: 30px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); max-width: 600px; margin: 0 auto; border-top: 4px solid #8B0000;">
+    <h2 style="color: #333333; margin-top: 0;">Admin Access Granted!</h2>
+    <p style="color: #555555; line-height: 1.6; font-size: 16px;">
+      Hello <strong>${username}</strong>,
+    </p>
+    <p style="color: #555555; line-height: 1.6; font-size: 16px;">
+      You have been successfully registered as a System Administrator at Nest Official.
+    </p>
+    <p style="color: #555555; line-height: 1.6; font-size: 16px;">
+      Here are your highly secure login credentials to access the master admin dashboard:
+    </p>
+    <div style="background-color: #f8f9fa; padding: 15px; border-left: 4px solid #8B0000; margin: 20px 0;">
+      <p style="margin: 0; color: #333333; font-size: 16px;"><strong>Email ID:</strong> ${adminEmail}</p>
+      <p style="margin: 5px 0 0; color: #333333; font-size: 16px;"><strong>Password:</strong> ${password}</p>
+    </div>
+    <p style="color: #555555; line-height: 1.6; font-size: 16px;">
+      Because you possess administrative privileges, please keep these credentials completely confidential and change your password immediately upon logging in.
+    </p>
+    <br/>
+    <p style="color: #555555; font-size: 15px; margin-bottom: 5px;">Best Regards,</p>
+    <p style="font-weight: bold; color: #333333; font-size: 16px; margin-top: 0;">Nest Official Security Team</p>
+  </div>
+</div>`;
+
+    // The Gmail REST API strictly requires "base64url" encoding (no '+', no '/', no '=')
+    const encodedEmail = Buffer.from(rawEmail)
+      .toString("base64")
+      .replace(/\+/g, "-")
+      .replace(/\//g, "_")
+      .replace(/=+$/, "");
+
+    // Send it purely over HTTPS (Port 443), which Render NEVER blocks!
+    const sendResponse = await fetch("https://gmail.googleapis.com/gmail/v1/users/me/messages/send", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ raw: encodedEmail }),
+    });
+
+    const result = await sendResponse.json();
+    if (result.error) {
+      console.error("Gmail HTTP Error (Admin Mail):", result.error);
+      return false;
+    }
+
+    console.log("Admin registration email sent successfully! ID: " + result.id);
+    return true;
+  } catch (error) {
+    console.error("Error sending admin email via HTTP:", error);
+    return false;
+  }
+};

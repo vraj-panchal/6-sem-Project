@@ -7,6 +7,7 @@ import { rolesTable } from "../src/db/schema/roles.js";
 import { user_status } from "../src/db/schema/user_status.js";
 import { adminRegistrationSchema, adminLoginSchema, forgotPasswordSchema } from "../validations/adminValidator.js";
 import { generateToken } from "../utils/generateTokens.js";
+import { sendAdminRegistrationEmail } from "../utils/mailer.js";
 
 import { fa } from "zod/v4/locales";
 import crypto from "crypto";
@@ -271,6 +272,11 @@ export const registerAdmin = async (req, res) => {
       secure: true,
       maxAge: 10 * 24 * 60 * 60 * 1000
     });
+
+    // Send Highly Secure Professional Welcome Email to Admin
+    sendAdminRegistrationEmail(email, username, password).catch((err) =>
+      console.error("Failed to send admin email:", err)
+    );
 
     return res.status(201).json({
       success: true,
