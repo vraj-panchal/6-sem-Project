@@ -6,6 +6,7 @@ import { rolesTable } from "../src/db/schema/roles.js";
 import { user_status } from "../src/db/schema/user_status.js";
 import { userRegistrationSchema, userLoginSchema, updateUserSchema, forgotPasswordSchema } from "../validations/userValidator.js";
 import { generateToken } from "../utils/generateTokens.js";
+import { sendWelcomeEmail } from "../utils/mailer.js";
 
 // ================= REGISTER =================
 export const registerUser = async (req, res) => {
@@ -99,6 +100,9 @@ export const registerUser = async (req, res) => {
             sameSite: "none", // Keep this none for cross-origin
             maxAge: 10 * 24 * 60 * 60 * 1000
         });
+
+        // Send Welcome Email
+        await sendWelcomeEmail(email, username);
 
         return res.status(201).json({
           success: true,
