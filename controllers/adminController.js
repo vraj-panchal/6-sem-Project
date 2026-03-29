@@ -307,8 +307,13 @@ export const loginAdmin = async (req, res) => {
 
     const { email, password } = result.data;
 
+    const role = await db.select().from(rolesTable).where(eq(rolesTable.name, "admin")).limit(1);
+    if (!role.length) {
+      return res.status(401).json({ success: false, message: "Email or Password Incorrect" });
+    }
+
     // Find admin
-    const admin = await db.select().from(userTable).where(eq(userTable.email, email));
+    const admin = await db.select().from(userTable).where(and(eq(userTable.email, email), eq(userTable.role_id, role[0].id)));
     if (!admin || admin.length === 0) {
       return res.status(401).json({ success: false, message: "Email or Password Incorrect" });
     }
@@ -401,11 +406,16 @@ export const forgotAdminPassword = async (req, res) => {
 
     const { email, password } = result.data;
 
+    const role = await db.select().from(rolesTable).where(eq(rolesTable.name, "admin")).limit(1);
+    if (!role.length) {
+      return res.status(404).json({ success: false, message: "Email not found" });
+    }
+
     // 2. Fetch Admin by Email
     const adminRef = await db
       .select({ id: userTable.id })
       .from(userTable)
-      .where(eq(userTable.email, email))
+      .where(and(eq(userTable.email, email), eq(userTable.role_id, role[0].id)))
       .limit(1);
 
     if (!adminRef.length) {

@@ -1,4 +1,4 @@
-import { eq, or } from "drizzle-orm";
+import { eq, or, and } from "drizzle-orm";
 import bcrypt from "bcrypt";
 import { db } from "../config/db.js";
 import { userTable } from "../src/db/schema/users.js";
@@ -140,10 +140,15 @@ export const loginUser = async (req, res) => {
 
     const { email, password } = validation.data;
 
+    const role = await db.select().from(rolesTable).where(eq(rolesTable.name, "user")).limit(1);
+    if (!role.length) {
+      return res.status(401).json({ success: false, message: "Email or Password Incorrect" });
+    }
+
     const user = await db
       .select()
       .from(userTable)
-      .where(eq(userTable.email, email))
+      .where(and(eq(userTable.email, email), eq(userTable.role_id, role[0].id)))
       .limit(1);
 
     if (!user.length) {
@@ -394,11 +399,16 @@ export const forgotPassword = async (req, res) => {
 
     const { email, password } = result.data;
 
-    // 2. Find user by EMAIL
+    const role = await db.select().from(rolesTable).where(eq(rolesTable.name, "user")).limit(1);
+    if (!role.length) {
+      return res.status(404).json({ success: false, message: "Email not found" });
+    }
+
+    // 2. Find user by EMAIL and ROLE
     const users = await db
       .select({ id: userTable.id })
       .from(userTable)
-      .where(eq(userTable.email, email))
+      .where(and(eq(userTable.email, email), eq(userTable.role_id, role[0].id)))
       .limit(1);
 
     if (!users.length) {
