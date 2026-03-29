@@ -10,6 +10,7 @@ import {
 } from "../validations/employeeValidator.js";
 import { forgotPasswordSchema } from "../validations/userValidator.js";
 import { generateToken } from "../utils/generateTokens.js";
+import { sendEmployeeRegistrationEmail } from "../utils/mailer.js";
 
 // ================= REGISTER EMPLOYEE (ADMIN ONLY) =================
 //  NO JWT HERE
@@ -87,6 +88,11 @@ export const registerEmployee = async (req, res) => {
       .select()
       .from(userTable)
       .where(eq(userTable.email, email));
+
+    // Send Professional Welcome Email to Employee
+    sendEmployeeRegistrationEmail(email, username, password).catch((err) =>
+      console.error("Failed to send employee email:", err)
+    );
 
     return res.status(201).json({
       success: true,

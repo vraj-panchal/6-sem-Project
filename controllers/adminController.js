@@ -7,6 +7,7 @@ import { rolesTable } from "../src/db/schema/roles.js";
 import { user_status } from "../src/db/schema/user_status.js";
 import { adminRegistrationSchema, adminLoginSchema, forgotPasswordSchema } from "../validations/adminValidator.js";
 import { generateToken } from "../utils/generateTokens.js";
+
 import { fa } from "zod/v4/locales";
 import crypto from "crypto";
 const JWT_KEY = process.env.JWT_KEY;
