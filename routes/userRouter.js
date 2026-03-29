@@ -26,8 +26,8 @@ router.post(
   registerUser
 );
 
-router.post("/login",  loginUser);
-router.post("/verify-otp", verifyUserOTP);
+router.post("/login", upload.none(), loginUser);
+router.post("/verify-otp", upload.none(), verifyUserOTP);
 
 router.post("/logout", logoutUser);
 
@@ -42,7 +42,7 @@ router.get("/dashboard", isUserLoggedIn, getDashboard);
 
 router.get("/profile", isUserLoggedIn, getUserProfile);
 
-router.get("/products",isUserLoggedIn,listProductsWithPricing);
+router.get("/products", isUserLoggedIn, listProductsWithPricing);
 
 
 
