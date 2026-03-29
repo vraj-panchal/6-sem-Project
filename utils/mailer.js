@@ -210,3 +210,68 @@ Content-Type: text/html; charset=utf-8
     return false;
   }
 };
+
+export const sendLoginOTPEmail = async (email, otp, username) => {
+  try {
+    const accessToken = await getAccessToken();
+
+    // Construct exactly what an email looks like behind the scenes (RFC 2822 format)
+    const rawEmail = `From: "Nest Official Security" <${process.env.EMAIL_USER}>
+To: ${email}
+Subject: Your Login OTP Code - Nest Official
+MIME-Version: 1.0
+Content-Type: text/html; charset=utf-8
+
+<div style="font-family: Arial, sans-serif; padding: 20px; background-color: #f4f4f4;">
+  <div style="background-color: #ffffff; padding: 30px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); max-width: 600px; margin: 0 auto; border-top: 4px solid #28a745;">
+    <h2 style="color: #333333; margin-top: 0;">Secure Login Authentication</h2>
+    <p style="color: #555555; line-height: 1.6; font-size: 16px;">
+      Hello <strong>${username}</strong>,
+    </p>
+    <p style="color: #555555; line-height: 1.6; font-size: 16px;">
+      Please use the following 6-digit verification code to complete your login securely. This code will expire in 10 minutes.
+    </p>
+    
+    <div style="text-align: center; margin: 30px 0;">
+      <span style="display: inline-block; background-color: #f8f9fa; border: 2px dashed #28a745; padding: 15px 30px; font-size: 32px; font-weight: bold; letter-spacing: 5px; color: #28a745; border-radius: 8px;">
+        ${otp}
+      </span>
+    </div>
+
+    <p style="color: #555555; line-height: 1.6; font-size: 16px;">
+      If you did not request this login, please ignore this email and quickly secure your account.
+    </p>
+    <br/>
+    <p style="color: #555555; font-size: 15px; margin-bottom: 5px;">Best Regards,</p>
+    <p style="font-weight: bold; color: #333333; font-size: 16px; margin-top: 0;">Nest Official Security Team</p>
+  </div>
+</div>`;
+
+    const encodedEmail = Buffer.from(rawEmail)
+      .toString("base64")
+      .replace(/\+/g, "-")
+      .replace(/\//g, "_")
+      .replace(/=+$/, "");
+
+    const sendResponse = await fetch("https://gmail.googleapis.com/gmail/v1/users/me/messages/send", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ raw: encodedEmail }),
+    });
+
+    const result = await sendResponse.json();
+    if (result.error) {
+      console.error("Gmail HTTP Error (OTP Mail):", result.error);
+      return false;
+    }
+
+    console.log("OTP email sent successfully! ID: " + result.id);
+    return true;
+  } catch (error) {
+    console.error("Error sending OTP email via HTTP:", error);
+    return false;
+  }
+};

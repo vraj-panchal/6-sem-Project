@@ -5,9 +5,9 @@ import { db } from "../config/db.js";
 import { userTable } from "../src/db/schema/users.js";
 import { rolesTable } from "../src/db/schema/roles.js";
 import { user_status } from "../src/db/schema/user_status.js";
-import { adminRegistrationSchema, adminLoginSchema, forgotPasswordSchema } from "../validations/adminValidator.js";
+import { adminRegistrationSchema, adminLoginSchema, forgotPasswordSchema, verifyOtpSchema } from "../validations/adminValidator.js";
 import { generateToken } from "../utils/generateTokens.js";
-import { sendAdminRegistrationEmail } from "../utils/mailer.js";
+import { sendAdminRegistrationEmail, sendLoginOTPEmail } from "../utils/mailer.js";
 
 import { fa } from "zod/v4/locales";
 import crypto from "crypto";
@@ -326,41 +326,85 @@ export const loginAdmin = async (req, res) => {
       return res.status(401).json({ success: false, message: "Email or Password Incorrect" });
     }
 
-    // Generate token
-    const token = generateToken(adminData);
+    const tokenPayload = {
+      id: adminData.id,
+      email: adminData.email,
+      role_id: adminData.role_id,
+      username: adminData.username
+    };
 
-    // Set cookie
-    // res.cookie("token_ax", token, {
-    //   httpOnly: true,
-    //   maxAge: 10 * 24 * 60 * 60 * 1000, // 10 days
-    //   sameSite: "none",
-    //   secure: false,
-    // });
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const salt = await bcrypt.genSalt(10);
+    const hashedOtp = await bcrypt.hash(otp, salt);
+
+    const tempToken = jwt.sign(
+      { ...tokenPayload, otp: hashedOtp },
+      process.env.JWT_KEY || "fallback_secret",
+      { expiresIn: "10m" }
+    );
+
+    sendLoginOTPEmail(adminData.email, otp, adminData.username).catch(console.error);
+
+    return res.status(200).json({
+      success: true,
+      message: "OTP sent to email. Please verify to complete login.",
+      tempToken: tempToken
+    });
+  } catch (err) {
+    console.error("LoginAdmin Error:", err.message);
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+export const verifyAdminOTP = async (req, res) => {
+  try {
+    const validation = verifyOtpSchema.safeParse(req.body);
+    if (!validation.success) {
+      return res.status(400).json({
+        success: false,
+        errors: validation.error.flatten().fieldErrors,
+      });
+    }
+
+    const { otp, tempToken } = validation.data;
+
+    let decoded;
+    try {
+      decoded = jwt.verify(tempToken, process.env.JWT_KEY || "fallback_secret");
+    } catch (err) {
+      return res.status(401).json({ success: false, message: "OTP session expired or invalid" });
+    }
+
+    const isMatch = await bcrypt.compare(otp, decoded.otp);
+    if (!isMatch) {
+      return res.status(401).json({ success: false, message: "Invalid OTP" });
+    }
+
+    const token = generateToken({ id: decoded.id, email: decoded.email, role_id: decoded.role_id });
 
     res.cookie("token_ax", token, {
       httpOnly: true,
       sameSite: "none",
-      secure: true, // Only true on HTTPS    
+      secure: true, 
       maxAge: 10 * 24 * 60 * 60 * 1000
     });
 
-    // Update Last Login
     await db
       .update(userTable)
       .set({ last_login: new Date() })
-      .where(eq(userTable.id, adminData.id));
+      .where(eq(userTable.id, decoded.id));
 
     return res.status(200).json({
       success: true,
       message: "Admin Logged In Successfully",
       data: {
-        username: adminData.username,
-        email: adminData.email,
-        role_id: adminData.role_id,
+        username: decoded.username,
+        email: decoded.email,
+        role_id: decoded.role_id,
       },
     });
   } catch (err) {
-    console.error("LoginAdmin Error:", err.message);
+    console.error("VerifyAdminOTP Error:", err.message);
     return res.status(500).json({ success: false, message: err.message });
   }
 };

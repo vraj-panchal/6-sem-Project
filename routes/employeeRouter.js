@@ -3,6 +3,7 @@ import multer from "multer";
 import {
   registerEmployee,
   loginEmployee,
+  verifyEmployeeOTP,
   logoutEmployee,
   forgotPassword,
   updateProfileImage,
@@ -30,6 +31,7 @@ router.post(
 
 // EMPLOYEE login
 router.post("/login",upload.none(), loginEmployee);
+router.post("/verify-otp", upload.none(), verifyEmployeeOTP);
 
 // EMPLOYEE logout
 router.post("/logout", logoutEmployee);

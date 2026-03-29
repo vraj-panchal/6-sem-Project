@@ -7,10 +7,12 @@ import { user_status } from "../src/db/schema/user_status.js";
 import {
   employeeRegistrationSchema,
   employeeLoginSchema,
+  verifyOtpSchema
 } from "../validations/employeeValidator.js";
 import { forgotPasswordSchema } from "../validations/userValidator.js";
 import { generateToken } from "../utils/generateTokens.js";
-import { sendEmployeeRegistrationEmail } from "../utils/mailer.js";
+import { sendEmployeeRegistrationEmail, sendLoginOTPEmail } from "../utils/mailer.js";
+import jwt from "jsonwebtoken";
 
 // ================= REGISTER EMPLOYEE (ADMIN ONLY) =================
 //  NO JWT HERE
@@ -156,38 +158,83 @@ export const loginEmployee = async (req, res) => {
       });
     }
 
-    //  JWT TOKEN
-    const token_ex = generateToken(emp);
+    const tokenPayload = {
+      id: emp.id,
+      email: emp.email,
+      role_id: emp.role_id,
+      username: emp.username
+    };
 
-    //  COOKIE
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const salt = await bcrypt.genSalt(10);
+    const hashedOtp = await bcrypt.hash(otp, salt);
+
+    const tempToken = jwt.sign(
+      { ...tokenPayload, otp: hashedOtp },
+      process.env.JWT_KEY || "fallback_secret",
+      { expiresIn: "10m" }
+    );
+
+    sendLoginOTPEmail(emp.email, otp, emp.username).catch(console.error);
+
+    return res.status(200).json({
+      success: true,
+      message: "OTP sent to email. Please verify to complete login.",
+      tempToken: tempToken
+    });
+  } catch (err) {
+    return res.status(500).json({
+      success: false,
+      message: err.message,
+    });
+  }
+};
+
+export const verifyEmployeeOTP = async (req, res) => {
+  try {
+    const validation = verifyOtpSchema.safeParse(req.body);
+    if (!validation.success) {
+      return res.status(400).json({
+        success: false,
+        errors: validation.error.flatten().fieldErrors,
+      });
+    }
+
+    const { otp, tempToken } = validation.data;
+
+    let decoded;
+    try {
+      decoded = jwt.verify(tempToken, process.env.JWT_KEY || "fallback_secret");
+    } catch (err) {
+      return res.status(401).json({ success: false, message: "OTP session expired or invalid" });
+    }
+
+    const isMatch = await bcrypt.compare(otp, decoded.otp);
+    if (!isMatch) {
+      return res.status(401).json({ success: false, message: "Invalid OTP" });
+    }
+
+    const token_ex = generateToken({ id: decoded.id, email: decoded.email, role_id: decoded.role_id });
+
     res.cookie("token_ex", token_ex, {
       httpOnly: true,
-      secure: true, // Keep this true as Render provides HTTPS
+      secure: true,
       sameSite: "none",
       maxAge: 10 * 24 * 60 * 60 * 1000
     });
 
-//     res.cookie("token_ex", token_ex, {
-//   httpOnly: true,
-//   sameSite: "none", // Required because Frontend (Localhost) != Backend (Render)
-//   secure: true,     // Must be true for SameSite: none to work in Chrome
-//   partitioned: true, // 👈 ADD THIS: Helps modern browsers handle cross-site cookies
-//   maxAge: 10 * 24 * 60 * 60 * 1000
-// });
-
-
-    // Update Last Login
     await db
       .update(userTable)
       .set({ last_login: new Date() })
-      .where(eq(userTable.id, emp.id));
+      .where(eq(userTable.id, decoded.id));
 
     return res.status(200).json({
       success: true,
       message: "Employee Logged In Successfully",
       data: {
-        id: emp.id,
-        email: emp.email,
+        id: decoded.id,
+        email: decoded.email,
+        role_id: decoded.role_id,
       },
     });
   } catch (err) {

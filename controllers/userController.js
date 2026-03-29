@@ -4,9 +4,10 @@ import { db } from "../config/db.js";
 import { userTable } from "../src/db/schema/users.js";
 import { rolesTable } from "../src/db/schema/roles.js";
 import { user_status } from "../src/db/schema/user_status.js";
-import { userRegistrationSchema, userLoginSchema, updateUserSchema, forgotPasswordSchema } from "../validations/userValidator.js";
+import jwt from "jsonwebtoken";
+import { verifyOtpSchema } from "../validations/userValidator.js";
 import { generateToken } from "../utils/generateTokens.js";
-import { sendWelcomeEmail } from "../utils/mailer.js";
+import { sendWelcomeEmail, sendLoginOTPEmail } from "../utils/mailer.js";
 
 // ================= REGISTER =================
 export const registerUser = async (req, res) => {
@@ -172,29 +173,23 @@ export const loginUser = async (req, res) => {
         });
       }
 
-      const token = generateToken(Userpass);
+      const otp = Math.floor(100000 + Math.random() * 900000).toString();
+      
+      const salt = await bcrypt.genSalt(10);
+      const hashedOtp = await bcrypt.hash(otp, salt);
 
-      res.cookie("token_ux", token, {
-        httpOnly: true,
-        secure: true, // Keep this true as Render provides HTTPS
-        sameSite: "none", // Keep this none for cross-origin
-        maxAge: 10 * 24 * 60 * 60 * 1000
-      });
+      const tempToken = jwt.sign(
+        { id: Userpass.id, email: Userpass.email, role_id: Userpass.role_id, otp: hashedOtp },
+        process.env.JWT_KEY || "fallback_secret",
+        { expiresIn: "10m" }
+      );
 
-      // Update Last Login
-      await db
-        .update(userTable)
-        .set({ last_login: new Date() })
-        .where(eq(userTable.id, Userpass.id));
+      sendLoginOTPEmail(Userpass.email, otp, Userpass.username).catch(console.error);
 
       return res.status(200).json({
         success: true,
-        message: "User Logged In Successfully",
-        data: {
-          id: Userpass.id,
-          email: Userpass.email,
-          role_id: Userpass.role_id,
-        },
+        message: "OTP sent to email. Please verify to complete login.",
+        tempToken: tempToken
       });
     });
 
@@ -203,6 +198,58 @@ export const loginUser = async (req, res) => {
       success: false,
       message: err.message,
     });
+  }
+};
+
+export const verifyUserOTP = async (req, res) => {
+  try {
+    const validation = verifyOtpSchema.safeParse(req.body);
+    if (!validation.success) {
+      return res.status(400).json({
+        success: false,
+        errors: validation.error.flatten().fieldErrors,
+      });
+    }
+
+    const { otp, tempToken } = validation.data;
+
+    let decoded;
+    try {
+      decoded = jwt.verify(tempToken, process.env.JWT_KEY || "fallback_secret");
+    } catch (err) {
+      return res.status(401).json({ success: false, message: "OTP session expired or invalid" });
+    }
+
+    const isMatch = await bcrypt.compare(otp, decoded.otp);
+    if (!isMatch) {
+      return res.status(401).json({ success: false, message: "Invalid OTP" });
+    }
+
+    const token = generateToken({ id: decoded.id, email: decoded.email, role_id: decoded.role_id });
+
+    res.cookie("token_ux", token, {
+      httpOnly: true,
+      secure: true,
+      sameSite: "none",
+      maxAge: 10 * 24 * 60 * 60 * 1000
+    });
+
+    await db
+      .update(userTable)
+      .set({ last_login: new Date() })
+      .where(eq(userTable.id, decoded.id));
+
+    return res.status(200).json({
+      success: true,
+      message: "User Logged In Successfully",
+      data: {
+        id: decoded.id,
+        email: decoded.email,
+        role_id: decoded.role_id,
+      },
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
   }
 };
 

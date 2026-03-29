@@ -5,7 +5,7 @@ import dotenv from "dotenv";
 // import { isUserLoggedIn } from "../middlewares/isUserLoggedIn.js";
 // import { userImageUpload } from "../middlewares/upload.js";
 import { listProductsWithPricing } from "../controllers/productController.js";
-import { registerUser, loginUser, logoutUser, updateUserProfile, forgotPassword, getDashboard, getUserProfile, getUserProfileByUsername, updateProfileImage } from "../controllers/userController.js";
+import { registerUser, loginUser, verifyUserOTP, logoutUser, updateUserProfile, forgotPassword, getDashboard, getUserProfile, getUserProfileByUsername, updateProfileImage } from "../controllers/userController.js";
 import { isUserLoggedIn } from "../middlewares/isUserLoggedIn.js";
 import { userImageUpload } from "../middlewares/upload.js";
 
@@ -27,6 +27,7 @@ router.post(
 );
 
 router.post("/login", upload.none(), loginUser);
+router.post("/verify-otp", upload.none(), verifyUserOTP);
 
 router.post("/logout", logoutUser);
 
