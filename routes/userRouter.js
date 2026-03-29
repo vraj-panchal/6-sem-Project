@@ -26,8 +26,8 @@ router.post(
   registerUser
 );
 
-router.post("/login", upload.none(), loginUser);
-router.post("/verify-otp", upload.none(), verifyUserOTP);
+router.post("/login",  loginUser);
+router.post("/verify-otp", verifyUserOTP);
 
 router.post("/logout", logoutUser);
 
