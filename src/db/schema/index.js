@@ -3,11 +3,7 @@ import { user_status } from "./user_status.js";
 import { userTable } from "./users.js";
 import { productsTable } from "./product.js";
 import { categoriesTable } from "./categories.js";
-import { productsTable } from "./product.js";
 import { productBatchesTable } from "./productBatches.js";
-import { productTransactionsTable } from "./productTransactions.js";
+import { productTransactionsTable, transactionTypeEnum } from "./productTransactions.js";
 
-
-
-
-export { rolesTable, user_status, userTable, categoriesTable, productsTable, productBatchesTable, productTransactionsTable };
+export { rolesTable, user_status, userTable, categoriesTable, productsTable, productBatchesTable, productTransactionsTable, transactionTypeEnum };

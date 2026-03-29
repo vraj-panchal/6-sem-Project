@@ -1,5 +1,5 @@
 {
-  "id": "4b2f4b92-e884-4320-8bda-5dff438fa1f1",
+  "id": "07e76e87-b9ff-4bd4-b35d-2835fc25eccb",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -633,7 +633,19 @@
       "isRLSEnabled": false
     }
   },
-  "enums": {},
+  "enums": {
+    "public.transaction_type_enum": {
+      "name": "transaction_type_enum",
+      "schema": "public",
+      "values": [
+        "restock",
+        "sale",
+        "return",
+        "damaged",
+        "adjustment"
+      ]
+    }
+  },
   "schemas": {},
   "sequences": {},
   "roles": {},

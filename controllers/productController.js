@@ -315,7 +315,7 @@ export const addProduct = async (req, res) => {
       });
     }
 
-    let {
+    const {
       categoryId,
       productName,
       brand,
@@ -329,10 +329,6 @@ export const addProduct = async (req, res) => {
       description,
       isActive,
     } = result.data;
-
-    // convert isActive properly
-    // if (isActive === "0") isActive = false;
-  isActive = ["true", "1", true, 1].includes(isActive);
 
     // ✅ 1️⃣ Check category exists
     const category = await db

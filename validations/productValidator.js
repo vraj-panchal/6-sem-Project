@@ -64,7 +64,10 @@ export const createProductSchema = z.object({
     .optional(),
 
   isActive: z.preprocess(
-    (val) => val === "true" || val === true,
+    (val) => {
+      if (val === undefined || val === null || val === "") return undefined;
+      return val === "true" || val === "1" || val === 1 || val === true;
+    },
     z.boolean()
   ).optional(),
 });
