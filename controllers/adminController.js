@@ -269,7 +269,7 @@ export const registerAdmin = async (req, res) => {
     res.cookie("token_ax", token, {
       httpOnly: true,
       sameSite: "none",
-      secure: true,
+      secure: true, // Only true on HTTPS    
       maxAge: 10 * 24 * 60 * 60 * 1000
     });
 
@@ -385,7 +385,7 @@ export const verifyAdminOTP = async (req, res) => {
     res.cookie("token_ax", token, {
       httpOnly: true,
       sameSite: "none",
-      secure: true, 
+      secure: true, // Only true on HTTPS    
       maxAge: 10 * 24 * 60 * 60 * 1000
     });
 

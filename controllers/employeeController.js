@@ -216,9 +216,10 @@ export const verifyEmployeeOTP = async (req, res) => {
 
     const token_ex = generateToken({ id: decoded.id, email: decoded.email, role_id: decoded.role_id });
 
+    //  COOKIE
     res.cookie("token_ex", token_ex, {
       httpOnly: true,
-      secure: true,
+      secure: true, // Keep this true as Render provides HTTPS
       sameSite: "none",
       maxAge: 10 * 24 * 60 * 60 * 1000
     });
