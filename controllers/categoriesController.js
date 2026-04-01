@@ -3,6 +3,20 @@ import { db } from "../config/db.js";
 import { categoriesTable } from "../src/db/schema/categories.js";
 import { createCategorySchema, updateCategorySchema } from "../validations/categoriesValidator.js";
 
+const formatDateIST = (date) => {
+  if (!date) return null;
+  return new Date(date).toLocaleString("en-IN", {
+    timeZone: "Asia/Kolkata",
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: true,
+  });
+};
+
 // List Categories
 export const listCategories = async (req, res) => {
 
@@ -18,9 +32,16 @@ export const listCategories = async (req, res) => {
     }
 
     else {
+      // Map to proper Indian Standard Time
+      const formattedCategories = categories.map((cat) => ({
+        ...cat,
+        createdAt: formatDateIST(cat.createdAt),
+        updatedAt: formatDateIST(cat.updatedAt),
+      }));
+
       return res.status(200).json({
         success: true,
-        data: categories
+        data: formattedCategories
       });
     }
 
@@ -72,10 +93,17 @@ export const addCategory = async (req, res) => {
       })
       .returning();
 
+    // Format the date to Indian Standard Time and hide updatedAt for newly created items
+    const categoryData = {
+      ...newCategory[0],
+      createdAt: formatDateIST(newCategory[0].createdAt),
+      updatedAt: null // Explicitly excluded as it was just created
+    };
+
     return res.status(201).json({
       success: true,
       message: "Category added successfully",
-      data: newCategory[0],
+      data: categoryData,
     });
   } catch (error) {
     return res.status(500).json({
@@ -145,14 +173,21 @@ export const updateCategory = async (req, res) => {
         ...(categoryName && { categoryName }),
         ...(allowedUnits && { allowedUnits }),
         ...(isActive !== undefined && { isActive }),
+        updatedAt: new Date() // Force explicitly update the updatedAt timestamp
       })
       .where(eq(categoriesTable.id, Number(id)))
       .returning();
 
+    const updatedData = {
+      ...updatedCategory[0],
+      createdAt: formatDateIST(updatedCategory[0].createdAt),
+      updatedAt: formatDateIST(updatedCategory[0].updatedAt)
+    };
+
     return res.status(200).json({
       success: true,
       message: "Category updated successfully",
-      data: updatedCategory[0],
+      data: updatedData,
     });
   } catch (error) {
     return res.status(500).json({
