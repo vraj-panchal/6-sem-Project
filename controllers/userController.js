@@ -99,6 +99,7 @@ export const registerUser = async (req, res) => {
           httpOnly: true,
           secure: true, // Keep this true as Render provides HTTPS
           sameSite: "none", // Keep this none for cross-origin
+          path: "/",
           maxAge: 10 * 24 * 60 * 60 * 1000
         });
 
@@ -231,6 +232,7 @@ export const verifyUserOTP = async (req, res) => {
       httpOnly: true,
       secure: true, // Keep this true as Render provides HTTPS
       sameSite: "none", // Keep this none for cross-origin
+      path: "/",
       maxAge: 10 * 24 * 60 * 60 * 1000
     });
 
@@ -259,6 +261,7 @@ export const logoutUser = async (req, res) => {
     httpOnly: true,
     sameSite: "none",
     secure: true,
+    path: "/",
     maxAge: 10 * 24 * 60 * 60 * 1000
   });
 
