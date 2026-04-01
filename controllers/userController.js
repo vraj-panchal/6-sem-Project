@@ -226,6 +226,15 @@ export const verifyUserOTP = async (req, res) => {
       return res.status(401).json({ success: false, message: "Invalid OTP" });
     }
 
+    // 🔒 SECURITY CHECK: Ensure this temporary token actually belongs to a User
+    const role = await db.select().from(rolesTable).where(eq(rolesTable.id, decoded.role_id)).limit(1);
+    if (!role.length || role[0].name !== "user") {
+      return res.status(403).json({ 
+        success: false, 
+        message: "Security Error: You are trying to verify an Admin/Employee login through the User portal!" 
+      });
+    }
+
     const token = generateToken({ id: decoded.id, email: decoded.email, role_id: decoded.role_id });
 
     res.cookie("token_ux", token, {
