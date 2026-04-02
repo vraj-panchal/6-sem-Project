@@ -3,6 +3,7 @@ import express from "express";
 import {
   registerAdmin,
   loginAdmin,
+  verifyAdminOTP,
   logoutAdmin,
   forgotAdminPassword,
   getAdminProfileByUsername,
@@ -52,6 +53,7 @@ router.post(
 );
 
 router.post("/login", upload.none(), loginAdmin);
+router.post("/verify-otp", upload.none(), verifyAdminOTP);
 
 router.post("/logout", logoutAdmin);
 

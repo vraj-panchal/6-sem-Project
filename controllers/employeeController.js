@@ -1,4 +1,4 @@
-import { eq, or } from "drizzle-orm";
+import { eq, or, and } from "drizzle-orm";
 import bcrypt from "bcrypt";
 import { db } from "../config/db.js";
 import { userTable } from "../src/db/schema/users.js";
@@ -7,9 +7,12 @@ import { user_status } from "../src/db/schema/user_status.js";
 import {
   employeeRegistrationSchema,
   employeeLoginSchema,
+  verifyOtpSchema
 } from "../validations/employeeValidator.js";
 import { forgotPasswordSchema } from "../validations/userValidator.js";
 import { generateToken } from "../utils/generateTokens.js";
+import { sendEmployeeRegistrationEmail, sendLoginOTPEmail } from "../utils/mailer.js";
+import jwt from "jsonwebtoken";
 
 // ================= REGISTER EMPLOYEE (ADMIN ONLY) =================
 //  NO JWT HERE
@@ -88,6 +91,11 @@ export const registerEmployee = async (req, res) => {
       .from(userTable)
       .where(eq(userTable.email, email));
 
+    // Send Professional Welcome Email to Employee
+    sendEmployeeRegistrationEmail(email, username, password).catch((err) =>
+      console.error("Failed to send employee email:", err)
+    );
+
     return res.status(201).json({
       success: true,
       message: "Employee Registered Successfully",
@@ -122,10 +130,15 @@ export const loginEmployee = async (req, res) => {
 
     const { email, password } = result.data;
 
+    const role = await db.select().from(rolesTable).where(eq(rolesTable.name, "employee")).limit(1);
+    if (!role.length) {
+      return res.status(401).json({ success: false, message: "Email or Password Incorrect" });
+    }
+
     const employee = await db
       .select()
       .from(userTable)
-      .where(eq(userTable.email, email))
+      .where(and(eq(userTable.email, email), eq(userTable.role_id, role[0].id)))
       .limit(1);
 
     if (!employee.length) {
@@ -145,38 +158,94 @@ export const loginEmployee = async (req, res) => {
       });
     }
 
-    //  JWT TOKEN
-    const token_ex = generateToken(emp);
+    const tokenPayload = {
+      id: emp.id,
+      email: emp.email,
+      role_id: emp.role_id,
+      username: emp.username
+    };
+
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const salt = await bcrypt.genSalt(10);
+    const hashedOtp = await bcrypt.hash(otp, salt);
+
+    const tempToken = jwt.sign(
+      { ...tokenPayload, otp: hashedOtp },
+      process.env.JWT_KEY || "fallback_secret",
+      { expiresIn: "10m" }
+    );
+
+    sendLoginOTPEmail(emp.email, otp, emp.username).catch(console.error);
+
+    return res.status(200).json({
+      success: true,
+      message: "OTP sent to email. Please verify to complete login.",
+      tempToken: tempToken
+    });
+  } catch (err) {
+    return res.status(500).json({
+      success: false,
+      message: err.message,
+    });
+  }
+};
+
+export const verifyEmployeeOTP = async (req, res) => {
+  try {
+    const validation = verifyOtpSchema.safeParse(req.body);
+    if (!validation.success) {
+      return res.status(400).json({
+        success: false,
+        errors: validation.error.flatten().fieldErrors,
+      });
+    }
+
+    const { otp, tempToken } = validation.data;
+
+    let decoded;
+    try {
+      decoded = jwt.verify(tempToken, process.env.JWT_KEY || "fallback_secret");
+    } catch (err) {
+      return res.status(401).json({ success: false, message: "OTP session expired or invalid" });
+    }
+
+    const isMatch = await bcrypt.compare(otp, decoded.otp);
+    if (!isMatch) {
+      return res.status(401).json({ success: false, message: "Invalid OTP" });
+    }
+
+    // 🔒 SECURITY CHECK: Ensure this temporary token belongs to an Employee
+    const role = await db.select().from(rolesTable).where(eq(rolesTable.id, decoded.role_id)).limit(1);
+    if (!role.length || role[0].name !== "employee") {
+      return res.status(403).json({ 
+        success: false, 
+        message: "Security Error: You are trying to verify a User/Admin login through the Employee portal!" 
+      });
+    }
+
+    const token_ex = generateToken({ id: decoded.id, email: decoded.email, role_id: decoded.role_id });
 
     //  COOKIE
     res.cookie("token_ex", token_ex, {
       httpOnly: true,
       secure: true, // Keep this true as Render provides HTTPS
       sameSite: "none",
+      path: "/",
       maxAge: 10 * 24 * 60 * 60 * 1000
     });
 
-//     res.cookie("token_ex", token_ex, {
-//   httpOnly: true,
-//   sameSite: "none", // Required because Frontend (Localhost) != Backend (Render)
-//   secure: true,     // Must be true for SameSite: none to work in Chrome
-//   partitioned: true, // 👈 ADD THIS: Helps modern browsers handle cross-site cookies
-//   maxAge: 10 * 24 * 60 * 60 * 1000
-// });
-
-
-    // Update Last Login
     await db
       .update(userTable)
       .set({ last_login: new Date() })
-      .where(eq(userTable.id, emp.id));
+      .where(eq(userTable.id, decoded.id));
 
     return res.status(200).json({
       success: true,
       message: "Employee Logged In Successfully",
       data: {
-        id: emp.id,
-        email: emp.email,
+        id: decoded.id,
+        email: decoded.email,
+        role_id: decoded.role_id,
       },
     });
   } catch (err) {
@@ -279,10 +348,15 @@ export const forgotPassword = async (req, res) => {
 
     const { email, password } = result.data;
 
+    const role = await db.select().from(rolesTable).where(eq(rolesTable.name, "employee")).limit(1);
+    if (!role.length) {
+      return res.status(404).json({ success: false, message: "Email not found" });
+    }
+
     const users = await db
       .select({ id: userTable.id })
       .from(userTable)
-      .where(eq(userTable.email, email))
+      .where(and(eq(userTable.email, email), eq(userTable.role_id, role[0].id)))
       .limit(1);
 
     if (!users.length) {

@@ -137,7 +137,7 @@ export const isAdminLoggedIn = async (req, res, next) => {
       });
     }
 
-      req.admin = {
+    req.admin = {
       id: admin.id,
       username: admin.username,
       email: admin.email,

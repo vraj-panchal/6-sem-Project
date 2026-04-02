@@ -5,8 +5,10 @@ import { db } from "../config/db.js";
 import { userTable } from "../src/db/schema/users.js";
 import { rolesTable } from "../src/db/schema/roles.js";
 import { user_status } from "../src/db/schema/user_status.js";
-import { adminRegistrationSchema, adminLoginSchema, forgotPasswordSchema } from "../validations/adminValidator.js";
+import { adminRegistrationSchema, adminLoginSchema, forgotPasswordSchema, verifyOtpSchema } from "../validations/adminValidator.js";
 import { generateToken } from "../utils/generateTokens.js";
+import { sendAdminRegistrationEmail, sendLoginOTPEmail } from "../utils/mailer.js";
+
 import { fa } from "zod/v4/locales";
 import crypto from "crypto";
 const JWT_KEY = process.env.JWT_KEY;
@@ -267,9 +269,15 @@ export const registerAdmin = async (req, res) => {
     res.cookie("token_ax", token, {
       httpOnly: true,
       sameSite: "none",
-      secure: true,
+      secure: true, // Only true on HTTPS    
+      path: "/",
       maxAge: 10 * 24 * 60 * 60 * 1000
     });
+
+    // Send Highly Secure Professional Welcome Email to Admin
+    sendAdminRegistrationEmail(email, username, password).catch((err) =>
+      console.error("Failed to send admin email:", err)
+    );
 
     return res.status(201).json({
       success: true,
@@ -300,8 +308,13 @@ export const loginAdmin = async (req, res) => {
 
     const { email, password } = result.data;
 
+    const role = await db.select().from(rolesTable).where(eq(rolesTable.name, "admin")).limit(1);
+    if (!role.length) {
+      return res.status(401).json({ success: false, message: "Email or Password Incorrect" });
+    }
+
     // Find admin
-    const admin = await db.select().from(userTable).where(eq(userTable.email, email));
+    const admin = await db.select().from(userTable).where(and(eq(userTable.email, email), eq(userTable.role_id, role[0].id)));
     if (!admin || admin.length === 0) {
       return res.status(401).json({ success: false, message: "Email or Password Incorrect" });
     }
@@ -314,41 +327,95 @@ export const loginAdmin = async (req, res) => {
       return res.status(401).json({ success: false, message: "Email or Password Incorrect" });
     }
 
-    // Generate token
-    const token = generateToken(adminData);
+    const tokenPayload = {
+      id: adminData.id,
+      email: adminData.email,
+      role_id: adminData.role_id,
+      username: adminData.username
+    };
 
-    // Set cookie
-    // res.cookie("token_ax", token, {
-    //   httpOnly: true,
-    //   maxAge: 10 * 24 * 60 * 60 * 1000, // 10 days
-    //   sameSite: "none",
-    //   secure: false,
-    // });
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const salt = await bcrypt.genSalt(10);
+    const hashedOtp = await bcrypt.hash(otp, salt);
+
+    const tempToken = jwt.sign(
+      { ...tokenPayload, otp: hashedOtp },
+      process.env.JWT_KEY || "fallback_secret",
+      { expiresIn: "10m" }
+    );
+
+    sendLoginOTPEmail(adminData.email, otp, adminData.username).catch(console.error);
+
+    return res.status(200).json({
+      success: true,
+      message: "OTP sent to email. Please verify to complete login.",
+      tempToken: tempToken
+    });
+  } catch (err) {
+    console.error("LoginAdmin Error:", err.message);
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+export const verifyAdminOTP = async (req, res) => {
+  try {
+    const validation = verifyOtpSchema.safeParse(req.body);
+    if (!validation.success) {
+      return res.status(400).json({
+        success: false,
+        errors: validation.error.flatten().fieldErrors,
+      });
+    }
+
+    const { otp, tempToken } = validation.data;
+
+    let decoded;
+    try {
+      decoded = jwt.verify(tempToken, process.env.JWT_KEY || "fallback_secret");
+    } catch (err) {
+      return res.status(401).json({ success: false, message: "OTP session expired or invalid" });
+    }
+
+    const isMatch = await bcrypt.compare(otp, decoded.otp);
+    if (!isMatch) {
+      return res.status(401).json({ success: false, message: "Invalid OTP" });
+    }
+
+    // 🔒 SECURITY CHECK: Ensure this temporary token belongs to an Admin
+    const role = await db.select().from(rolesTable).where(eq(rolesTable.id, decoded.role_id)).limit(1);
+    if (!role.length || role[0].name !== "admin") {
+      return res.status(403).json({ 
+        success: false, 
+        message: "Security Error: You are trying to verify a User/Employee login through the Admin portal!" 
+      });
+    }
+
+    const token = generateToken({ id: decoded.id, email: decoded.email, role_id: decoded.role_id });
 
     res.cookie("token_ax", token, {
       httpOnly: true,
       sameSite: "none",
       secure: true, // Only true on HTTPS    
+      path: "/",
       maxAge: 10 * 24 * 60 * 60 * 1000
     });
 
-    // Update Last Login
     await db
       .update(userTable)
       .set({ last_login: new Date() })
-      .where(eq(userTable.id, adminData.id));
+      .where(eq(userTable.id, decoded.id));
 
     return res.status(200).json({
       success: true,
       message: "Admin Logged In Successfully",
       data: {
-        username: adminData.username,
-        email: adminData.email,
-        role_id: adminData.role_id,
+        username: decoded.username,
+        email: decoded.email,
+        role_id: decoded.role_id,
       },
     });
   } catch (err) {
-    console.error("LoginAdmin Error:", err.message);
+    console.error("VerifyAdminOTP Error:", err.message);
     return res.status(500).json({ success: false, message: err.message });
   }
 };
@@ -368,6 +435,7 @@ export const logoutAdmin = async (req, res) => {
       expires: new Date(0),
       sameSite: "none",
       secure: true,
+      path: "/",
     });
 
     return res.status(200).json({ success: true, message: "Admin Logged Out Successfully" });
@@ -394,11 +462,16 @@ export const forgotAdminPassword = async (req, res) => {
 
     const { email, password } = result.data;
 
+    const role = await db.select().from(rolesTable).where(eq(rolesTable.name, "admin")).limit(1);
+    if (!role.length) {
+      return res.status(404).json({ success: false, message: "Email not found" });
+    }
+
     // 2. Fetch Admin by Email
     const adminRef = await db
       .select({ id: userTable.id })
       .from(userTable)
-      .where(eq(userTable.email, email))
+      .where(and(eq(userTable.email, email), eq(userTable.role_id, role[0].id)))
       .limit(1);
 
     if (!adminRef.length) {

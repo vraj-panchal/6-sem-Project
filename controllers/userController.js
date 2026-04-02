@@ -1,12 +1,13 @@
-import { eq, or } from "drizzle-orm";
+import { eq, or, and } from "drizzle-orm";
 import bcrypt from "bcrypt";
 import { db } from "../config/db.js";
 import { userTable } from "../src/db/schema/users.js";
 import { rolesTable } from "../src/db/schema/roles.js";
 import { user_status } from "../src/db/schema/user_status.js";
-import { userRegistrationSchema, userLoginSchema, updateUserSchema, forgotPasswordSchema } from "../validations/userValidator.js";
+import jwt from "jsonwebtoken";
+import { userRegistrationSchema, userLoginSchema, updateUserSchema, forgotPasswordSchema, verifyOtpSchema } from "../validations/userValidator.js";
 import { generateToken } from "../utils/generateTokens.js";
-import { sendWelcomeEmail } from "../utils/mailer.js";
+import { sendWelcomeEmail, sendLoginOTPEmail } from "../utils/mailer.js";
 
 // ================= REGISTER =================
 export const registerUser = async (req, res) => {
@@ -98,6 +99,7 @@ export const registerUser = async (req, res) => {
           httpOnly: true,
           secure: true, // Keep this true as Render provides HTTPS
           sameSite: "none", // Keep this none for cross-origin
+          path: "/",
           maxAge: 10 * 24 * 60 * 60 * 1000
         });
 
@@ -140,10 +142,15 @@ export const loginUser = async (req, res) => {
 
     const { email, password } = validation.data;
 
+    const role = await db.select().from(rolesTable).where(eq(rolesTable.name, "user")).limit(1);
+    if (!role.length) {
+      return res.status(401).json({ success: false, message: "Email or Password Incorrect" });
+    }
+
     const user = await db
       .select()
       .from(userTable)
-      .where(eq(userTable.email, email))
+      .where(and(eq(userTable.email, email), eq(userTable.role_id, role[0].id)))
       .limit(1);
 
     if (!user.length) {
@@ -167,29 +174,23 @@ export const loginUser = async (req, res) => {
         });
       }
 
-      const token = generateToken(Userpass);
+      const otp = Math.floor(100000 + Math.random() * 900000).toString();
+      
+      const salt = await bcrypt.genSalt(10);
+      const hashedOtp = await bcrypt.hash(otp, salt);
 
-      res.cookie("token_ux", token, {
-        httpOnly: true,
-        secure: true, // Keep this true as Render provides HTTPS
-        sameSite: "none", // Keep this none for cross-origin
-        maxAge: 10 * 24 * 60 * 60 * 1000
-      });
+      const tempToken = jwt.sign(
+        { id: Userpass.id, email: Userpass.email, role_id: Userpass.role_id, otp: hashedOtp },
+        process.env.JWT_KEY || "fallback_secret",
+        { expiresIn: "10m" }
+      );
 
-      // Update Last Login
-      await db
-        .update(userTable)
-        .set({ last_login: new Date() })
-        .where(eq(userTable.id, Userpass.id));
+      sendLoginOTPEmail(Userpass.email, otp, Userpass.username).catch(console.error);
 
       return res.status(200).json({
         success: true,
-        message: "User Logged In Successfully",
-        data: {
-          id: Userpass.id,
-          email: Userpass.email,
-          role_id: Userpass.role_id,
-        },
+        message: "OTP sent to email. Please verify to complete login.",
+        tempToken: tempToken
       });
     });
 
@@ -201,12 +202,75 @@ export const loginUser = async (req, res) => {
   }
 };
 
+export const verifyUserOTP = async (req, res) => {
+  try {
+    const validation = verifyOtpSchema.safeParse(req.body);
+    if (!validation.success) {
+      return res.status(400).json({
+        success: false,
+        errors: validation.error.flatten().fieldErrors,
+      });
+    }
+
+    const { otp, tempToken } = validation.data;
+
+    let decoded;
+    try {
+      decoded = jwt.verify(tempToken, process.env.JWT_KEY || "fallback_secret");
+    } catch (err) {
+      return res.status(401).json({ success: false, message: "OTP session expired or invalid" });
+    }
+
+    const isMatch = await bcrypt.compare(otp, decoded.otp);
+    if (!isMatch) {
+      return res.status(401).json({ success: false, message: "Invalid OTP" });
+    }
+
+    // 🔒 SECURITY CHECK: Ensure this temporary token actually belongs to a User
+    const role = await db.select().from(rolesTable).where(eq(rolesTable.id, decoded.role_id)).limit(1);
+    if (!role.length || role[0].name !== "user") {
+      return res.status(403).json({ 
+        success: false, 
+        message: "Security Error: You are trying to verify an Admin/Employee login through the User portal!" 
+      });
+    }
+
+    const token = generateToken({ id: decoded.id, email: decoded.email, role_id: decoded.role_id });
+
+    res.cookie("token_ux", token, {
+      httpOnly: true,
+      secure: true, // Keep this true as Render provides HTTPS
+      sameSite: "none", // Keep this none for cross-origin
+      path: "/",
+      maxAge: 10 * 24 * 60 * 60 * 1000
+    });
+
+    await db
+      .update(userTable)
+      .set({ last_login: new Date() })
+      .where(eq(userTable.id, decoded.id));
+
+    return res.status(200).json({
+      success: true,
+      message: "User Logged In Successfully",
+      data: {
+        id: decoded.id,
+        email: decoded.email,
+        role_id: decoded.role_id,
+      },
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
 // ================= LOGOUT =================
 export const logoutUser = async (req, res) => {
   res.cookie("token_ux", "", {
     httpOnly: true,
     sameSite: "none",
     secure: true,
+    path: "/",
     maxAge: 10 * 24 * 60 * 60 * 1000
   });
 
@@ -394,11 +458,16 @@ export const forgotPassword = async (req, res) => {
 
     const { email, password } = result.data;
 
-    // 2. Find user by EMAIL
+    const role = await db.select().from(rolesTable).where(eq(rolesTable.name, "user")).limit(1);
+    if (!role.length) {
+      return res.status(404).json({ success: false, message: "Email not found" });
+    }
+
+    // 2. Find user by EMAIL and ROLE
     const users = await db
       .select({ id: userTable.id })
       .from(userTable)
-      .where(eq(userTable.email, email))
+      .where(and(eq(userTable.email, email), eq(userTable.role_id, role[0].id)))
       .limit(1);
 
     if (!users.length) {
