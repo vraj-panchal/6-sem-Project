@@ -1,4 +1,4 @@
-import { eq, and, gt, asc, sql, count, ne } from "drizzle-orm";
+import { eq, and, gt, asc, desc, sql, count, ne } from "drizzle-orm";
 import { db } from "../config/db.js";
 import { productsTable } from "../src/db/schema/product.js";
 import { productBatchesTable } from "../src/db/schema/productBatches.js";
@@ -105,7 +105,7 @@ export const listProductsWithPricing = async (req, res) => {
         )
       )
       .where(eq(productsTable.isActive, true))
-      .orderBy(productsTable.id) // stable ordering
+      .orderBy(asc(productsTable.productName))
       .limit(limit)
       .offset(offset);
 
@@ -204,7 +204,7 @@ export const getAdminProductList = async (req, res) => {
         productsTable.isActive,
         categoriesTable.categoryName
       )
-      .orderBy(asc(productsTable.productName))
+      .orderBy(desc(productsTable.isActive), asc(productsTable.productName))
       .limit(limit)
       .offset(offset);
 
@@ -640,7 +640,7 @@ export const getProductsByCategoryName = async (req, res) => {
           productsTable.isActive,
           categoriesTable.categoryName
         )
-        .orderBy(asc(productsTable.productName))
+        .orderBy(desc(productsTable.isActive), asc(productsTable.productName))
         .limit(limit)
         .offset(offset);
 
@@ -746,7 +746,7 @@ export const getProductsByCategoryName = async (req, res) => {
         )
       )
       .where(and(eq(productsTable.isActive, true), eq(productsTable.categoryId, categoryId)))
-      .orderBy(productsTable.id)
+      .orderBy(asc(productsTable.productName))
       .limit(limit)
       .offset(offset);
 
