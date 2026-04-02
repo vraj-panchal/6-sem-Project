@@ -21,7 +21,7 @@ import { productImageUpload } from "../middlewares/upload.js";
 import { addProduct, getAdminProductList, updateProduct, deleteProduct, getProductsByCategoryName } from "../controllers/productController.js";
 
 import { listCategories, addCategory, updateCategory, deleteCategory } from "../controllers/categoriesController.js";
-import { listBatches, listallBatches, createProductBatch, updateBatch, deactivateBatch, adjustBatchStock } from "../controllers/productbatchController.js";
+import { listBatches, listallBatches, getSingleBatchDetails, createProductBatch, updateBatch, deactivateBatch, adjustBatchStock } from "../controllers/productbatchController.js";
 
 
 
@@ -121,8 +121,11 @@ router.delete("/products/delete/:id", isAdminLoggedIn, deleteProduct);
 // product batches and inventory management routes will go here
 //------------------------------------------------------------
 
-//1️⃣ List batches
+//1️⃣ List batches by Product ID
 router.get("/batches/:id", isAdminLoggedIn, listBatches);
+
+// 🟦 Get single specific batch detail by Batch ID
+router.get("/batch/detail/:id", isAdminLoggedIn, getSingleBatchDetails);
 
 //2️⃣ Create batch
 router.post("/batches/add", isAdminLoggedIn, upload.none(), createProductBatch);

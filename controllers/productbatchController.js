@@ -99,9 +99,59 @@ export const listallBatches = async (req, res) => {
   }
 };
 
-//
+// 🟦 Get single specific batch detail by Batch ID
+export const getSingleBatchDetails = async (req, res) => {
+  try {
+    const { id } = req.params;
 
+    const batch = await db
+      .select({
+        batchId: productBatchesTable.id,
+        productId: productBatchesTable.productId,
+        batchNo: productBatchesTable.batchNo,
+        mrp: productBatchesTable.mrp,
+        basePrice: productBatchesTable.basePrice,
+        discount: productBatchesTable.discount,
+        currentStock: productBatchesTable.currentStock,
+        expiryDate: productBatchesTable.expiryDate,
+        isActive: productBatchesTable.isActive,
+        productName: productsTable.productName,
+        sku: productsTable.sku,
+        imageUrl: productsTable.imageUrl,
+      })
+      .from(productBatchesTable)
+      .leftJoin(productsTable, eq(productBatchesTable.productId, productsTable.id))
+      .where(eq(productBatchesTable.id, Number(id)))
+      .limit(1);
 
+    if (!batch.length) {
+      return res.status(404).json({
+        success: false,
+        message: "Batch not found",
+      });
+    }
+
+    const b = batch[0];
+    const base = Number(b.basePrice);
+    const discount = Number(b.discount);
+    const totalPrice = base - (base * discount / 100);
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        ...b,
+        totalPrice: Number(totalPrice.toFixed(2))
+      },
+    });
+
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Server Error",
+      error: error.message,
+    });
+  }
+};
 
 // 2️⃣CREATE BATCH
 export const createProductBatch = async (req, res) => {
