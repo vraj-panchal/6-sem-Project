@@ -13,6 +13,7 @@ import {
 import { isAdminLoggedIn } from "../middlewares/isAdminLoggedIn.js";
 import { isEmployeeLoggedIn } from "../middlewares/isEmployeeLoggedIn.js";
 import { employeeImageUpload } from "../middlewares/upload.js";
+import { getProductsByCategoryName } from "../controllers/productController.js";
 
 const router = express.Router();
 const upload = multer();
@@ -46,6 +47,9 @@ router.get("/dashboard", isEmployeeLoggedIn, (req, res) => {
 
 // Update Profile Image
 router.put("/profile/update-image", isEmployeeLoggedIn, employeeImageUpload.single("profile_image"), updateProfileImage);
+
+// Products by category
+router.get("/categories/:categoryname", isEmployeeLoggedIn, getProductsByCategoryName);
 
 // Forgot Password
 router.put("/forgot-password", upload.none(), forgotPassword);
