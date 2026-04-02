@@ -7,7 +7,7 @@ import { user_status } from "../src/db/schema/user_status.js";
 import jwt from "jsonwebtoken";
 import { userRegistrationSchema, userLoginSchema, updateUserSchema, forgotPasswordSchema, verifyOtpSchema } from "../validations/userValidator.js";
 import { generateToken } from "../utils/generateTokens.js";
-import { sendWelcomeEmail, sendLoginOTPEmail } from "../utils/mailer.js";
+import { sendWelcomeEmail, sendLoginOTPEmail, sendPasswordResetOTPEmail } from "../utils/mailer.js";
 
 // ================= REGISTER =================
 export const registerUser = async (req, res) => {
@@ -491,7 +491,7 @@ export const forgotPassword = async (req, res) => {
       { expiresIn: "10m" }
     );
 
-    sendLoginOTPEmail(email, otp, user.username).catch(console.error);
+    sendPasswordResetOTPEmail(email, otp, user.username).catch(console.error);
 
     return res.status(200).json({
       success: true,

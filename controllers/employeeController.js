@@ -11,7 +11,7 @@ import {
 } from "../validations/employeeValidator.js";
 import { forgotPasswordSchema } from "../validations/userValidator.js";
 import { generateToken } from "../utils/generateTokens.js";
-import { sendEmployeeRegistrationEmail, sendLoginOTPEmail } from "../utils/mailer.js";
+import { sendEmployeeRegistrationEmail, sendLoginOTPEmail, sendPasswordResetOTPEmail } from "../utils/mailer.js";
 import jwt from "jsonwebtoken";
 
 // ================= REGISTER EMPLOYEE (ADMIN ONLY) =================
@@ -382,7 +382,7 @@ export const forgotPassword = async (req, res) => {
       { expiresIn: "10m" }
     );
 
-    sendLoginOTPEmail(email, otp, empUser.username).catch(console.error);
+    sendPasswordResetOTPEmail(email, otp, empUser.username).catch(console.error);
 
     return res.status(200).json({
       success: true,

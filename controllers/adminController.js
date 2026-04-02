@@ -7,7 +7,7 @@ import { rolesTable } from "../src/db/schema/roles.js";
 import { user_status } from "../src/db/schema/user_status.js";
 import { adminRegistrationSchema, adminLoginSchema, forgotPasswordSchema, verifyOtpSchema } from "../validations/adminValidator.js";
 import { generateToken } from "../utils/generateTokens.js";
-import { sendAdminRegistrationEmail, sendLoginOTPEmail } from "../utils/mailer.js";
+import { sendAdminRegistrationEmail, sendLoginOTPEmail, sendPasswordResetOTPEmail } from "../utils/mailer.js";
 
 import { fa } from "zod/v4/locales";
 import crypto from "crypto";
@@ -492,7 +492,7 @@ export const forgotAdminPassword = async (req, res) => {
       { expiresIn: "10m" }
     );
 
-    sendLoginOTPEmail(email, otp, adminUser.username).catch(console.error);
+    sendPasswordResetOTPEmail(email, otp, adminUser.username).catch(console.error);
 
     return res.status(200).json({
       success: true,
