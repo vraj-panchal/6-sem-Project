@@ -4,8 +4,8 @@ import { db } from "../config/db.js";
 import { productsTable } from "../src/db/schema/product.js";
 import { productBatchesTable } from "../src/db/schema/productBatches.js";
 import { productTransactionsTable } from "../src/db/schema/productTransactions.js";
-import { createProductBatchSchema } from "../validations/productbatchValidator.js";
 import { adjustStockSchema } from "../validations/adjuststockValidator.js";
+import { updateProductBatchSchema, createProductBatchSchema } from "../validations/productbatchValidator.js";
 
 
 //1️⃣ List batches
@@ -198,7 +198,25 @@ export const createProductBatch = async (req, res) => {
 export const updateBatch = async (req, res) => {
   try {
     const { id } = req.params;
-    const { expiryDate, mrp, basePrice, discount } = req.body;
+    
+    // 1️⃣ Validate body
+    const result = updateProductBatchSchema.safeParse(req.body);
+    if (!result.success) {
+      return res.status(400).json({
+        success: false,
+        errors: result.error.flatten().fieldErrors,
+      });
+    }
+
+    const { expiryDate, mrp, basePrice, discount } = result.data;
+
+    // Reject empty updates
+    if (expiryDate === undefined && mrp === undefined && basePrice === undefined && discount === undefined) {
+       return res.status(400).json({
+         success: false,
+         message: "No valid fields provided. Please check your spelling (e.g. use 'basePrice' not 'base_price')."
+       });
+    }
 
     const updatedBatch = await db
       .update(productBatchesTable)
