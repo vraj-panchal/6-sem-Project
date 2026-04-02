@@ -443,10 +443,9 @@ export const updateProfileImage = async (req, res) => {
   }
 };
 
-// ================= FORGOT PASSWORD (INSECURE + CALLBACK) =================
+// ================= FORGOT PASSWORD (STEP 1: SEND OTP) =================
 export const forgotPassword = async (req, res) => {
   try {
-    // 1. Validate body
     const result = forgotPasswordSchema.safeParse(req.body);
 
     if (!result.success) {
@@ -463,9 +462,8 @@ export const forgotPassword = async (req, res) => {
       return res.status(404).json({ success: false, message: "Email not found" });
     }
 
-    // 2. Find user by EMAIL and ROLE
     const users = await db
-      .select({ id: userTable.id })
+      .select({ id: userTable.id, username: userTable.username })
       .from(userTable)
       .where(and(eq(userTable.email, email), eq(userTable.role_id, role[0].id)))
       .limit(1);
@@ -476,43 +474,29 @@ export const forgotPassword = async (req, res) => {
         message: "Email not found",
       });
     }
-    const userId = users[0].id;
+    const user = users[0];
 
-    // 3. Hash password (CALLBACK STYLE)
-    bcrypt.genSalt(10, function (err, salt) {
-      if (err) {
-        return res.status(500).json({
-          success: false,
-          message: err.message,
-        });
-      }
+    // Generate and Hash OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const salt = await bcrypt.genSalt(10);
+    const hashedOtp = await bcrypt.hash(otp, salt);
 
-      bcrypt.hash(password, salt, async function (err, hash) {
-        if (err) {
-          return res.status(500).json({
-            success: false,
-            message: err.message,
-          });
-        }
+    // Hash the NEW password
+    const hashedNewPassword = await bcrypt.hash(password, salt);
 
-        try {
-          // 4. Update
-          await db
-            .update(userTable)
-            .set({ password: hash })
-            .where(eq(userTable.id, userId));
+    // Create temporary token
+    const tempToken = jwt.sign(
+      { id: user.id, email: email, role_id: role[0].id, otp: hashedOtp, newPassword: hashedNewPassword },
+      process.env.JWT_KEY || "fallback_secret",
+      { expiresIn: "10m" }
+    );
 
-          return res.status(200).json({
-            success: true,
-            message: "Password updated successfully",
-          });
-        } catch (dbErr) {
-          return res.status(500).json({
-            success: false,
-            message: dbErr.message,
-          });
-        }
-      });
+    sendLoginOTPEmail(email, otp, user.username).catch(console.error);
+
+    return res.status(200).json({
+      success: true,
+      message: "OTP sent to email. Please verify to reset your password.",
+      tempToken: tempToken
     });
 
   } catch (err) {
@@ -521,5 +505,58 @@ export const forgotPassword = async (req, res) => {
       success: false,
       message: "Internal Server Error",
     });
+  }
+};
+
+// ================= VERIFY PASSWORD RESET OTP (STEP 2: UPDATE DB) =================
+export const verifyPasswordResetOTP = async (req, res) => {
+  try {
+    const validation = verifyOtpSchema.safeParse(req.body);
+    if (!validation.success) {
+      return res.status(400).json({
+        success: false,
+        errors: validation.error.flatten().fieldErrors,
+      });
+    }
+
+    const { otp, tempToken } = validation.data;
+
+    let decoded;
+    try {
+      decoded = jwt.verify(tempToken, process.env.JWT_KEY || "fallback_secret");
+    } catch (err) {
+      return res.status(401).json({ success: false, message: "OTP session expired or invalid" });
+    }
+
+    if (!decoded.newPassword) {
+      return res.status(400).json({ success: false, message: "Invalid reset token format" });
+    }
+
+    const isMatch = await bcrypt.compare(otp, decoded.otp);
+    if (!isMatch) {
+      return res.status(401).json({ success: false, message: "Invalid OTP" });
+    }
+
+    // SECURITY CHECK: Ensure this temporary token belongs to a User
+    const role = await db.select().from(rolesTable).where(eq(rolesTable.id, decoded.role_id)).limit(1);
+    if (!role.length || role[0].name !== "user") {
+      return res.status(403).json({ 
+        success: false, 
+        message: "Security Error: Role mismatch!" 
+      });
+    }
+
+    // Update password in DB
+    await db
+      .update(userTable)
+      .set({ password: decoded.newPassword })
+      .where(eq(userTable.id, decoded.id));
+
+    return res.status(200).json({
+      success: true,
+      message: "Password updated successfully",
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
   }
 };

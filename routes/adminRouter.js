@@ -6,6 +6,7 @@ import {
   verifyAdminOTP,
   logoutAdmin,
   forgotAdminPassword,
+  verifyAdminPasswordResetOTP,
   getAdminProfileByUsername,
   updateProfileImage,
   getAllUsers,
@@ -19,7 +20,7 @@ import { productImageUpload } from "../middlewares/upload.js";
 import { addProduct, getAdminProductList, updateProduct, deleteProduct, getProductsByCategoryName } from "../controllers/productController.js";
 
 import { listCategories, addCategory, updateCategory, deleteCategory } from "../controllers/categoriesController.js";
-import { listBatches,listallBatches, createProductBatch, updateBatch, deactivateBatch, adjustBatchStock } from "../controllers/productbatchController.js";
+import { listBatches, listallBatches, createProductBatch, updateBatch, deactivateBatch, adjustBatchStock } from "../controllers/productbatchController.js";
 
 
 
@@ -58,6 +59,7 @@ router.post("/verify-otp", upload.none(), verifyAdminOTP);
 router.post("/logout", logoutAdmin);
 
 router.put("/forgot-password", upload.none(), forgotAdminPassword);
+router.put("/reset-password-verify", upload.none(), verifyAdminPasswordResetOTP);
 // router.post("/reset-password/:id/:token", resetAdminPassword);
 
 router.get("/dashboard", isAdminLoggedIn, (req, res) => {
@@ -76,9 +78,6 @@ router.get("/profile", isAdminLoggedIn, (req, res) => {
 });
 
 
-
-
-
 // Manage Categories
 
 // list of categories
@@ -91,7 +90,7 @@ router.post("/categories/add", isAdminLoggedIn, upload.none(), addCategory);
 router.put("/categories/update/:id", isAdminLoggedIn, upload.none(), updateCategory);
 
 // delete category
-router.delete("/categories/delete/:id", isAdminLoggedIn,deleteCategory);
+router.delete("/categories/delete/:id", isAdminLoggedIn, deleteCategory);
 
 // get product by category name
 router.get("/categories/:categoryname", isAdminLoggedIn, getProductsByCategoryName);
@@ -102,17 +101,17 @@ router.get("/categories/:categoryname", isAdminLoggedIn, getProductsByCategoryNa
 // Manage Products
 //------------------------------------------------------------
 // List Products
-router.get("/products",isAdminLoggedIn,getAdminProductList);
+router.get("/products", isAdminLoggedIn, getAdminProductList);
 
 
 //2️⃣ Add Product
-router.post("/products/add", isAdminLoggedIn,productImageUpload.single("imageUrl"),addProduct);
+router.post("/products/add", isAdminLoggedIn, productImageUpload.single("imageUrl"), addProduct);
 
 //3️⃣ Update Product
-router.put("/products/update/:id", isAdminLoggedIn,productImageUpload.single("imageUrl"),updateProduct);
+router.put("/products/update/:id", isAdminLoggedIn, productImageUpload.single("imageUrl"), updateProduct);
 
 // Delete Product
-router.delete("/products/delete/:id", isAdminLoggedIn,deleteProduct);
+router.delete("/products/delete/:id", isAdminLoggedIn, deleteProduct);
 
 
 //------------------------------------------------------------

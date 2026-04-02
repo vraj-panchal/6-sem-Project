@@ -6,6 +6,7 @@ import {
   verifyEmployeeOTP,
   logoutEmployee,
   forgotPassword,
+  verifyEmployeePasswordResetOTP,
   updateProfileImage,
   getEmployeeProfileByUsername,
 } from "../controllers/employeeController.js";
@@ -53,6 +54,7 @@ router.get("/categories/:categoryname", isEmployeeLoggedIn, getProductsByCategor
 
 // Forgot Password
 router.put("/forgot-password", upload.none(), forgotPassword);
+router.put("/reset-password-verify", upload.none(), verifyEmployeePasswordResetOTP);
 
 // Public Profile
 router.get("/:username", getEmployeeProfileByUsername);
