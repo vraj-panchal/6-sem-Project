@@ -345,9 +345,9 @@ export const addProduct = async (req, res) => {
     }
 
     // ✅ 2️⃣ Validate unit against allowedUnits
-    const allowedUnits = category[0].allowedUnits;
+    const allowedUnits = category[0].allowedUnits || [];
 
-    if (!allowedUnits.includes(baseUnit)) {
+    if (baseUnit && !allowedUnits.includes(baseUnit)) {
       return res.status(400).json({
         success: false,
         message: `Base Unit must be one of: ${allowedUnits.join(", ")}`,
@@ -385,9 +385,8 @@ export const addProduct = async (req, res) => {
         igst,
         description,
         imageUrl: req.file ? req.file.path : null,
-        isActive,
+        isActive: isActive !== undefined ? isActive : true,
         createdAt: sql`NOW() AT TIME ZONE 'Asia/Kolkata'`,
-        updatedAt: null,
       })
       .returning();
 
@@ -584,6 +583,89 @@ export const getProductsByCategoryName = async (req, res) => {
       return res.status(404).json({ success: false, message: "Category not found" });
     }
     const categoryId = categoryResult[0].id;
+
+    const isAdminOrEmployee = req.admin || req.employee || req.user?.role_name === "admin";
+
+    if (isAdminOrEmployee) {
+      // ---------------- ADMIN VIEW ----------------
+      const totalCountResult = await db
+        .select({ value: count(productsTable.id) })
+        .from(productsTable)
+        .where(eq(productsTable.categoryId, categoryId));
+
+      const totalItems = Number(totalCountResult[0]?.value ?? 0);
+
+      if (totalItems === 0) {
+        return res.status(200).json({
+          success: true,
+          pagination: { totalItems: 0, currentPage: page, totalPages: 0 },
+          data: [],
+        });
+      }
+
+      const products = await db
+        .select({
+          id: productsTable.id,
+          productName: productsTable.productName,
+          brand: productsTable.brand,
+          sku: productsTable.sku,
+          unit: productsTable.unit,
+          baseWeight: productsTable.baseWeight,
+          baseUnit: productsTable.baseUnit,
+          cgst: productsTable.cgst,
+          sgst: productsTable.sgst,
+          igst: productsTable.igst,
+          imageUrl: productsTable.imageUrl,
+          description: productsTable.description,
+          isActive: productsTable.isActive,
+          categoryName: categoriesTable.categoryName,
+          totalInventory: sql`cast(sum(${productBatchesTable.currentStock}) as float)`.mapWith(Number),
+          batchCount: count(productBatchesTable.id),
+          minPrice: sql`min(${productBatchesTable.basePrice})`.mapWith(Number),
+          maxPrice: sql`max(${productBatchesTable.mrp})`.mapWith(Number),
+        })
+        .from(productsTable)
+        .leftJoin(categoriesTable, eq(productsTable.categoryId, categoriesTable.id))
+        .leftJoin(productBatchesTable, eq(productsTable.id, productBatchesTable.productId))
+        .where(eq(productsTable.categoryId, categoryId))
+        .groupBy(
+          productsTable.id,
+          productsTable.productName,
+          productsTable.brand,
+          productsTable.sku,
+          productsTable.unit,
+          productsTable.baseWeight,
+          productsTable.baseUnit,
+          productsTable.cgst,
+          productsTable.sgst,
+          productsTable.igst,
+          productsTable.imageUrl,
+          productsTable.description,
+          productsTable.isActive,
+          categoriesTable.categoryName
+        )
+        .orderBy(asc(productsTable.productName))
+        .limit(limit)
+        .offset(offset);
+
+      const formattedData = products.map((p) => ({
+        ...p,
+        totalInventory: p.totalInventory || 0,
+        priceRange: p.minPrice ? `${p.minPrice} - ${p.maxPrice}` : "No Batches",
+      }));
+
+      return res.status(200).json({
+        success: true,
+        pagination: {
+          totalItems,
+          currentPage: page,
+          totalPages: Math.ceil(totalItems / limit),
+        },
+        data: formattedData,
+      });
+    }
+
+    // ---------------- USER VIEW ----------------
 
     // Step 1: Rank batches
     const rankedBatches = db
