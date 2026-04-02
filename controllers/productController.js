@@ -566,3 +566,127 @@ export const deleteProduct = async (req, res) => {
     });
   }
 };
+
+export const getProductsByCategoryName = async (req, res) => {
+  try {
+    const { categoryname } = req.params;
+    
+    const page = Math.max(parseInt(req.query.page) || 1, 1);
+    const limit = Math.min(Math.max(parseInt(req.query.limit) || 10, 1), 100);
+    const offset = (page - 1) * limit;
+
+    await deactivateExpiredBatches();
+    await deactivateExpiredProduct();
+
+    // Find category
+    const categoryResult = await db.select().from(categoriesTable).where(eq(categoriesTable.categoryName, categoryname)).limit(1);
+    if (!categoryResult.length) {
+      return res.status(404).json({ success: false, message: "Category not found" });
+    }
+    const categoryId = categoryResult[0].id;
+
+    // Step 1: Rank batches
+    const rankedBatches = db
+      .select({
+        productId: productBatchesTable.productId,
+        batchNo: productBatchesTable.batchNo,
+        expiryDate: productBatchesTable.expiryDate,
+        stock: productBatchesTable.currentStock,
+        mrp: productBatchesTable.mrp,
+        basePrice: productBatchesTable.basePrice,
+        discount: productBatchesTable.discount,
+        rowNumber: sql`
+          ROW_NUMBER() OVER (
+            PARTITION BY ${productBatchesTable.productId}
+            ORDER BY ${productBatchesTable.expiryDate} ASC
+          )
+        `.as("rowNumber"),
+      })
+      .from(productBatchesTable)
+      .where(
+        and(
+          eq(productBatchesTable.isActive, true),
+          gt(productBatchesTable.currentStock, 0),
+          gt(productBatchesTable.expiryDate, sql`CURRENT_DATE`)
+        )
+      )
+      .as("rankedBatches");
+
+    // Correct count
+    const totalCountResult = await db
+      .select({ value: count() })
+      .from(productsTable)
+      .innerJoin(
+        rankedBatches,
+        and(
+          eq(productsTable.id, rankedBatches.productId),
+          sql`${rankedBatches.rowNumber} = 1`
+        )
+      )
+      .where(and(eq(productsTable.isActive, true), eq(productsTable.categoryId, categoryId)));
+
+    const totalItems = Number(totalCountResult[0]?.value ?? 0);
+
+    if (totalItems === 0) {
+      return res.status(200).json({
+        success: true,
+        pagination: { totalItems: 0, currentPage: page, totalPages: 0 },
+        data: [],
+      });
+    }
+
+    // Fetch paginated products
+    const products = await db
+      .select({
+        id: productsTable.id,
+        productName: productsTable.productName,
+        imageUrl: productsTable.imageUrl,
+        sku: productsTable.sku,
+        unit: productsTable.unit,
+        batchNo: rankedBatches.batchNo,
+        expiryDate: rankedBatches.expiryDate,
+        stock: rankedBatches.stock,
+        mrp: rankedBatches.mrp,
+        basePrice: rankedBatches.basePrice,
+        discount: rankedBatches.discount,
+        totalPrice: sql`
+          ROUND(
+            ((${rankedBatches.basePrice} - ${rankedBatches.discount}) +
+            ((${rankedBatches.basePrice} - ${rankedBatches.discount}) *
+            (COALESCE(${productsTable.cgst}, 0) +
+             COALESCE(${productsTable.sgst}, 0) +
+             COALESCE(${productsTable.igst}, 0)) / 100)
+          ), 2)
+        `.mapWith(Number),
+      })
+      .from(productsTable)
+      .innerJoin(
+        rankedBatches,
+        and(
+          eq(productsTable.id, rankedBatches.productId),
+          sql`${rankedBatches.rowNumber} = 1`
+        )
+      )
+      .where(and(eq(productsTable.isActive, true), eq(productsTable.categoryId, categoryId)))
+      .orderBy(productsTable.id)
+      .limit(limit)
+      .offset(offset);
+
+    return res.status(200).json({
+      success: true,
+      pagination: {
+        totalItems,
+        currentPage: page,
+        totalPages: Math.ceil(totalItems / limit),
+      },
+      data: products,
+    });
+  } catch (error) {
+    console.error("Products By Category Error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal Server Error",
+      error: error.message,
+    });
+  }
+};
