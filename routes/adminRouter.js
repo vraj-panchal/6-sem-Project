@@ -121,11 +121,14 @@ router.delete("/products/delete/:id", isAdminLoggedIn, deleteProduct);
 // product batches and inventory management routes will go here
 //------------------------------------------------------------
 
-//1️⃣ List batches by Product ID
+//1️⃣ List all batches belonging to a specific Product ID
 router.get("/batches/:id", isAdminLoggedIn, listBatches);
 
-// 🟦 Get single specific batch detail by Batch ID
-router.get("/batch/detail/:id", isAdminLoggedIn, getSingleBatchDetails);
+// 🟦 The user mapped their frontend "View all batches" button to this URL, so we point it to listBatches!
+router.get("/batch/detail/:id", isAdminLoggedIn, listBatches);
+
+// 🟣 (Optional) If you ever legitimately need ONE single batch by Batch ID in the future:
+router.get("/batch/:id", isAdminLoggedIn, getSingleBatchDetails);
 
 //2️⃣ Create batch
 router.post("/batches/add", isAdminLoggedIn, upload.none(), createProductBatch);
