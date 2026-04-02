@@ -5,6 +5,10 @@ import { db } from "../config/db.js";
 import { userTable } from "../src/db/schema/users.js";
 import { rolesTable } from "../src/db/schema/roles.js";
 import { user_status } from "../src/db/schema/user_status.js";
+import { categoriesTable } from "../src/db/schema/categories.js";
+import { productsTable } from "../src/db/schema/product.js";
+import { productBatchesTable } from "../src/db/schema/productBatches.js";
+import { productTransactionsTable } from "../src/db/schema/productTransactions.js";
 import { adminRegistrationSchema, adminLoginSchema, forgotPasswordSchema, verifyOtpSchema } from "../validations/adminValidator.js";
 import { generateToken } from "../utils/generateTokens.js";
 import { sendAdminRegistrationEmail, sendLoginOTPEmail, sendPasswordResetOTPEmail } from "../utils/mailer.js";
@@ -559,5 +563,87 @@ export const verifyAdminPasswordResetOTP = async (req, res) => {
     });
   } catch (err) {
     return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// --------------------- GET DASHBOARD STATS ---------------------
+export const getDashboardStats = async (req, res) => {
+  try {
+    // 1. Get total counts
+    const categoriesCount = await db.select().from(categoriesTable);
+    const productsCount = await db.select().from(productsTable);
+    const usersCount = await db.select().from(userTable).innerJoin(rolesTable, eq(userTable.role_id, rolesTable.id)).where(eq(rolesTable.name, "user"));
+
+    // 2. Get total pending stock (Items sitting in warehouse)
+    const batches = await db.select({ currentStock: productBatchesTable.currentStock }).from(productBatchesTable);
+    const totalRemainingStock = batches.reduce((acc, curr) => acc + Number(curr.currentStock || 0), 0);
+
+    // 3. Process Transactions for Revenue and Averaging
+    const transactions = await db
+      .select({
+        transactionType: productTransactionsTable.transactionType,
+        quantity: productTransactionsTable.quantity,
+        basePrice: productBatchesTable.basePrice,
+        discount: productBatchesTable.discount,
+        cgst: productsTable.cgst,
+        sgst: productsTable.sgst,
+        igst: productsTable.igst
+      })
+      .from(productTransactionsTable)
+      .leftJoin(productBatchesTable, eq(productTransactionsTable.batchId, productBatchesTable.id))
+      .leftJoin(productsTable, eq(productBatchesTable.productId, productsTable.id));
+
+    let totalRevenue = 0;
+    let totalSalesCount = 0;
+    let totalDamagedCount = 0;
+    let totalReturnedCount = 0;
+
+    transactions.forEach(t => {
+       if (t.transactionType === "sale") {
+           // Safely calculate final price of item at time of transaction
+           const base = Number(t.basePrice) || 0;
+           const discount = Number(t.discount) || 0;
+           const tax = (Number(t.cgst) || 0) + (Number(t.sgst) || 0) + (Number(t.igst) || 0);
+           
+           const finalItemPrice = (base - discount) + tax;
+           const saleValue = (Number(t.quantity) || 0) * finalItemPrice;
+           
+           totalRevenue += saleValue;
+           totalSalesCount++;
+       } else if (t.transactionType === "damaged") {
+           totalDamagedCount += Number(t.quantity) || 0;
+       } else if (t.transactionType === "return") {
+           totalReturnedCount += Number(t.quantity) || 0;
+       }
+    });
+
+    const averageSaleValue = totalSalesCount > 0 ? (totalRevenue / totalSalesCount) : 0;
+
+    return res.status(200).json({
+      success: true,
+      message: "Analytics fetched successfully",
+      data: {
+        totals: {
+          categories: categoriesCount.length,
+          products: productsCount.length,
+          customers: usersCount.length,
+          totalRemainingStock: totalRemainingStock
+        },
+        transactions: {
+          totalRevenue: Number(totalRevenue.toFixed(2)),
+          averageSaleValue: Number(averageSaleValue.toFixed(2)),
+          totalSalesCount: totalSalesCount,
+          totalDamagedItems: totalDamagedCount,
+          totalReturnedItems: totalReturnedCount
+        }
+      }
+    });
+
+  } catch (error) {
+    console.error("Dashboard Analytics Error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal Server Error",
+    });
   }
 };

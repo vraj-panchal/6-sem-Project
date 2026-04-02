@@ -12,6 +12,7 @@ import {
   getAllUsers,
   getAllEmployees,
   updateUserStatus,
+  getDashboardStats
 } from "../controllers/adminController.js";
 
 import { isAdminLoggedIn } from "../middlewares/isAdminLoggedIn.js";
@@ -61,6 +62,8 @@ router.post("/logout", logoutAdmin);
 router.put("/forgot-password", upload.none(), forgotAdminPassword);
 router.put("/reset-password-verify", upload.none(), verifyAdminPasswordResetOTP);
 // router.post("/reset-password/:id/:token", resetAdminPassword);
+
+router.get("/dashboard-stats", isAdminLoggedIn, getDashboardStats);
 
 router.get("/dashboard", isAdminLoggedIn, (req, res) => {
   res.status(200).json({
