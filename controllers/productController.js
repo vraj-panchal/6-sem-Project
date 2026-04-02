@@ -4,8 +4,7 @@ import { productsTable } from "../src/db/schema/product.js";
 import { productBatchesTable } from "../src/db/schema/productBatches.js";
 import { categoriesTable } from "../src/db/schema/categories.js";
 import { createProductSchema, updateProductSchema } from "../validations/productValidator.js";
-import { deactivateExpiredBatches } from "../utils/expiryproducts.js";
-import { deactivateExpiredProduct } from "../utils/expiryproducts.js";       
+import { deactivateExpiredBatches } from "../utils/expiryproducts.js";       
 
 
 
@@ -17,7 +16,6 @@ export const listProductsWithPricing = async (req, res) => {
     const offset = (page - 1) * limit;
 
     await deactivateExpiredBatches();
-    await deactivateExpiredProduct();
 
 
     // ✅ Step 1: Rank batches (nearest expiry per product)
@@ -143,7 +141,6 @@ export const getAdminProductList = async (req, res) => {
     const offset = (page - 1) * limit;
 
      await deactivateExpiredBatches();
-     await deactivateExpiredProduct();
 
     // ✅ 1. Get total product count (admin sees all products)
     const totalCountResult = await db
@@ -575,7 +572,6 @@ export const getProductsByCategoryName = async (req, res) => {
     const offset = (page - 1) * limit;
 
     await deactivateExpiredBatches();
-    await deactivateExpiredProduct();
 
     // Find category
     const categoryResult = await db.select().from(categoriesTable).where(eq(categoriesTable.categoryName, categoryname)).limit(1);
