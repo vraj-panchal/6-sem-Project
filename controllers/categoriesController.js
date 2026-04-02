@@ -1,6 +1,7 @@
 import { eq, and, ne } from "drizzle-orm";
 import { db } from "../config/db.js";
 import { categoriesTable } from "../src/db/schema/categories.js";
+import { productsTable } from "../src/db/schema/product.js";
 import { createCategorySchema, updateCategorySchema } from "../validations/categoriesValidator.js";
 
 const formatDateIST = (date) => {
@@ -213,6 +214,20 @@ export const deleteCategory = async (req, res) => {
       return res.status(404).json({
         success: false,
         message: "Category not found"
+      });
+    }
+
+    //check if any products use this category
+    const associatedProducts = await db
+      .select({ id: productsTable.id })
+      .from(productsTable)
+      .where(eq(productsTable.categoryId, Number(id)))
+      .limit(1);
+
+    if (associatedProducts.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Cannot delete this category because it contains active products. Please delete or reassign the products first."
       });
     }
 
