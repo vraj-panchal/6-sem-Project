@@ -16,7 +16,7 @@ import {
 import { isAdminLoggedIn } from "../middlewares/isAdminLoggedIn.js";
 import { adminImageUpload } from "../middlewares/upload.js";
 import { productImageUpload } from "../middlewares/upload.js";
-import { addProduct, getAdminProductList, updateProduct, deleteProduct } from "../controllers/productController.js";
+import { addProduct, getAdminProductList, updateProduct, deleteProduct, getProductsByCategoryName } from "../controllers/productController.js";
 
 import { listCategories, addCategory, updateCategory, deleteCategory } from "../controllers/categoriesController.js";
 import { listBatches,listallBatches, createProductBatch, updateBatch, deactivateBatch, adjustBatchStock } from "../controllers/productbatchController.js";
@@ -92,6 +92,9 @@ router.put("/categories/update/:id", isAdminLoggedIn, upload.none(), updateCateg
 
 // delete category
 router.delete("/categories/delete/:id", isAdminLoggedIn,deleteCategory);
+
+// get product by category name
+router.get("/categories/:categoryname", isAdminLoggedIn, getProductsByCategoryName);
 
 
 

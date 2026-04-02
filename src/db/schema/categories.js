@@ -25,7 +25,4 @@ export const categoriesTable = pgTable("categories", {
   updatedAt: timestamp("updated_at", { precision: 3 })
     .defaultNow()
     .notNull(),
-
-  isActive: boolean("is_active")
-        .default(true),
 });

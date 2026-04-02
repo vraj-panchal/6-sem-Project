@@ -129,7 +129,7 @@ export const updateCategory = async (req, res) => {
       });
     }
 
-    const { categoryName, allowedUnits, isActive } = result.data;
+    const { categoryName, allowedUnits } = result.data;
 
     // Check if category exists
     const category = await db
@@ -172,7 +172,6 @@ export const updateCategory = async (req, res) => {
       .set({
         ...(categoryName && { categoryName }),
         ...(allowedUnits && { allowedUnits }),
-        ...(isActive !== undefined && { isActive }),
         updatedAt: new Date() // Force explicitly update the updatedAt timestamp
       })
       .where(eq(categoriesTable.id, Number(id)))
@@ -219,8 +218,7 @@ export const deleteCategory = async (req, res) => {
 
     //delete category
     const deletedcatrgory = await db
-      .update(categoriesTable)
-      .set({ isActive: false })
+      .delete(categoriesTable)
       .where(eq(categoriesTable.id, Number(id))).returning();
 
     if (!deletedcatrgory.length) {
