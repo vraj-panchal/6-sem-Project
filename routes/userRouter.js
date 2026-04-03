@@ -42,9 +42,9 @@ router.get("/dashboard", isUserLoggedIn, getDashboard);
 
 router.get("/profile", isUserLoggedIn, getUserProfile);
 
-router.get("/products", isUserLoggedIn, listProductsWithPricing);
+router.get("/products", listProductsWithPricing);
 
-router.get("/categories/:categoryname", isUserLoggedIn, getProductsByCategoryName);
+router.get("/categories/:categoryname", getProductsByCategoryName);
 
 // Cart Routes
 router.get("/cart", isUserLoggedIn, getCart);
