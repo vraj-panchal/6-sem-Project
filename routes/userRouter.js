@@ -8,7 +8,7 @@ import { listProductsWithPricing, getProductsByCategoryName } from "../controlle
 import { registerUser, loginUser, verifyUserOTP, logoutUser, updateUserProfile, forgotPassword, verifyPasswordResetOTP, getDashboard, getUserProfile, getUserProfileByUsername, updateProfileImage } from "../controllers/userController.js";
 import { isUserLoggedIn } from "../middlewares/isUserLoggedIn.js";
 import { userImageUpload } from "../middlewares/upload.js";
-
+import { addToCart, updateCartQuantity, removeFromCart, getCart } from "../controllers/cartController.js";
 
 
 dotenv.config();
@@ -46,6 +46,11 @@ router.get("/products", isUserLoggedIn, listProductsWithPricing);
 
 router.get("/categories/:categoryname", isUserLoggedIn, getProductsByCategoryName);
 
+// Cart Routes
+router.get("/cart", isUserLoggedIn, getCart);
+router.post("/cart", isUserLoggedIn, addToCart);
+router.put("/cart", isUserLoggedIn, updateCartQuantity);
+router.delete("/cart/:itemId", isUserLoggedIn, removeFromCart);
 
 
 // Public Profile
