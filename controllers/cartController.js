@@ -3,6 +3,96 @@ import { db } from "../config/db.js";
 import { cartTable, cartItemsTable } from "../src/db/schema/cart.js";
 import { productBatchesTable } from "../src/db/schema/productBatches.js";
 import { productsTable } from "../src/db/schema/product.js";
+
+// Helper to fetch and calculate cart totals (subtotals, counts, discounts)
+export const getCartData = async (userId) => {
+    const cart = await db.select().from(cartTable).where(eq(cartTable.userId, userId));
+    if (cart.length === 0) {
+        return { items: [], summary: { totalItems: 0, totalMrp: 0, totalDiscount: 0, totalPayable: 0 } };
+    }
+
+    const cartId = cart[0].id;
+    const items = await db
+        .select({
+            itemId: cartItemsTable.id,
+            quantity: cartItemsTable.quantity,
+            batchId: productBatchesTable.id,
+            batchNo: productBatchesTable.batchNo,
+            mrp: productBatchesTable.mrp,
+            basePrice: productBatchesTable.basePrice,
+            discount: productBatchesTable.discount,
+            currentStock: productBatchesTable.currentStock,
+            productId: productsTable.id,
+            productName: productsTable.productName,
+            imageUrl: productsTable.imageUrl,
+            unit: productsTable.unit,
+            cgst: productsTable.cgst,
+            sgst: productsTable.sgst,
+            igst: productsTable.igst,
+        })
+        .from(cartItemsTable)
+        .innerJoin(productBatchesTable, eq(cartItemsTable.batchId, productBatchesTable.id))
+        .innerJoin(productsTable, eq(productBatchesTable.productId, productsTable.id))
+        .where(eq(cartItemsTable.cartId, cartId));
+
+    let totalMrp = 0;
+    let totalDiscount = 0;
+    let totalPayable = 0;
+    let totalItems = 0;
+
+    const formattedItems = items.map(item => {
+        const qty = Number(item.quantity) || 0;
+        const mrp = Number(item.mrp) || 0;
+        const basePrice = Number(item.basePrice) || 0;
+        const discount = Number(item.discount) || 0;
+        
+        const sellingPriceBeforeTax = basePrice - discount;
+        const cgst = Number(item.cgst) || 0;
+        const sgst = Number(item.sgst) || 0;
+        const igst = Number(item.igst) || 0;
+        const totalTaxPercent = cgst + sgst + igst;
+        
+        const sellingPriceWithTax = sellingPriceBeforeTax + (sellingPriceBeforeTax * totalTaxPercent / 100);
+        
+        const itemTotalMrp = mrp * qty;
+        const itemTotalPayable = sellingPriceWithTax * qty;
+        const itemTotalDiscount = itemTotalMrp - itemTotalPayable;
+
+        totalMrp += itemTotalMrp;
+        totalPayable += itemTotalPayable;
+        totalDiscount += itemTotalDiscount;
+        totalItems += qty;
+
+        return {
+            itemId: item.itemId,
+            productId: item.productId,
+            productName: item.productName,
+            imageUrl: item.imageUrl,
+            unit: item.unit,
+            batchId: item.batchId,
+            batchNo: item.batchNo,
+            quantity: qty,
+            stock: Number(item.currentStock),
+            mrp: mrp,
+            basePrice: basePrice,
+            discount: discount,
+            payablePricePerUnit: Number(sellingPriceWithTax.toFixed(2)),
+            itemTotalMrp: Number(itemTotalMrp.toFixed(2)),
+            itemTotalPayable: Number(itemTotalPayable.toFixed(2)),
+        };
+    });
+
+    return {
+        items: formattedItems,
+        summary: {
+            totalItems,
+            totalMrp: Number(totalMrp.toFixed(2)),
+            totalDiscount: Number(totalDiscount.toFixed(2)),
+            totalPayable: Number(totalPayable.toFixed(2))
+        }
+    };
+};
+
 export const addToCart = async (req, res) => {
     try {
         const userId = req.user.id;
@@ -60,7 +150,8 @@ export const addToCart = async (req, res) => {
             });
         }
 
-        return res.status(200).json({ success: true, message: "Item added to cart successfully" });
+        const updatedCart = await getCartData(userId);
+        return res.status(200).json({ success: true, message: "Item added to cart successfully", data: updatedCart });
 
     } catch (error) {
         console.error("Add To Cart Error:", error);
@@ -100,7 +191,8 @@ export const updateCartQuantity = async (req, res) => {
             .set({ quantity: String(quantity) })
             .where(eq(cartItemsTable.id, itemId));
 
-        return res.status(200).json({ success: true, message: "Cart quantity updated successfully" });
+        const updatedCart = await getCartData(userId);
+        return res.status(200).json({ success: true, message: "Cart quantity updated successfully", data: updatedCart });
 
     } catch (error) {
         console.error("Update Cart Quantity Error:", error);
@@ -132,7 +224,8 @@ export const removeFromCart = async (req, res) => {
             return res.status(404).json({ success: false, message: "Item not found in cart" });
         }
 
-        return res.status(200).json({ success: true, message: "Product removed from cart successfully" });
+        const updatedCart = await getCartData(userId);
+        return res.status(200).json({ success: true, message: "Product removed from cart successfully", data: updatedCart });
 
     } catch (error) {
         console.error("Remove From Cart Error:", error);
@@ -143,96 +236,11 @@ export const removeFromCart = async (req, res) => {
 export const getCart = async (req, res) => {
     try {
         const userId = req.user.id;
-
-        const cart = await db.select().from(cartTable).where(eq(cartTable.userId, userId));
-        if (cart.length === 0) {
-            return res.status(200).json({ success: true, data: { items: [], summary: { totalMrp: 0, totalDiscount: 0, totalPayable: 0 } } });
-        }
-
-        const cartId = cart[0].id;
-
-        const items = await db
-            .select({
-                itemId: cartItemsTable.id,
-                quantity: cartItemsTable.quantity,
-                batchId: productBatchesTable.id,
-                batchNo: productBatchesTable.batchNo,
-                mrp: productBatchesTable.mrp,
-                basePrice: productBatchesTable.basePrice,
-                discount: productBatchesTable.discount,
-                currentStock: productBatchesTable.currentStock,
-                productId: productsTable.id,
-                productName: productsTable.productName,
-                imageUrl: productsTable.imageUrl,
-                unit: productsTable.unit,
-                cgst: productsTable.cgst,
-                sgst: productsTable.sgst,
-                igst: productsTable.igst,
-            })
-            .from(cartItemsTable)
-            .innerJoin(productBatchesTable, eq(cartItemsTable.batchId, productBatchesTable.id))
-            .innerJoin(productsTable, eq(productBatchesTable.productId, productsTable.id))
-            .where(eq(cartItemsTable.cartId, cartId));
-
-        let totalMrp = 0;
-        let totalDiscount = 0;
-        let totalPayable = 0;
-
-        const formattedItems = items.map(item => {
-            const qty = Number(item.quantity) || 0;
-            const mrp = Number(item.mrp) || 0;
-            const basePrice = Number(item.basePrice) || 0;
-            const discount = Number(item.discount) || 0;
-            
-            const sellingPriceBeforeTax = basePrice - discount;
-            const cgst = Number(item.cgst) || 0;
-            const sgst = Number(item.sgst) || 0;
-            const igst = Number(item.igst) || 0;
-            const totalTaxPercent = cgst + sgst + igst;
-            
-            const sellingPriceWithTax = sellingPriceBeforeTax + (sellingPriceBeforeTax * totalTaxPercent / 100);
-            
-            const itemTotalMrp = mrp * qty;
-            const itemTotalPayable = sellingPriceWithTax * qty;
-            const itemTotalDiscount = itemTotalMrp - itemTotalPayable;
-
-            totalMrp += itemTotalMrp;
-            totalPayable += itemTotalPayable;
-            totalDiscount += itemTotalDiscount;
-
-            return {
-                itemId: item.itemId,
-                productId: item.productId,
-                productName: item.productName,
-                imageUrl: item.imageUrl,
-                unit: item.unit,
-                batchId: item.batchId,
-                batchNo: item.batchNo,
-                quantity: qty,
-                stock: Number(item.currentStock),
-                mrp: mrp,
-                basePrice: basePrice,
-                discount: discount,
-                payablePricePerUnit: Number(sellingPriceWithTax.toFixed(2)),
-                itemTotalMrp: Number(itemTotalMrp.toFixed(2)),
-                itemTotalPayable: Number(itemTotalPayable.toFixed(2)),
-            };
-        });
-
-        totalMrp = Number(totalMrp.toFixed(2));
-        totalPayable = Number(totalPayable.toFixed(2));
-        totalDiscount = Number(totalDiscount.toFixed(2));
-
+        const cartData = await getCartData(userId);
+        
         return res.status(200).json({
             success: true,
-            data: {
-                items: formattedItems,
-                summary: {
-                    totalMrp,
-                    totalDiscount,
-                    totalPayable
-                }
-            }
+            data: cartData
         });
 
     } catch (error) {

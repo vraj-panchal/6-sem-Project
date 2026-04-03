@@ -4,7 +4,7 @@ import dotenv from "dotenv";
 // import { registerUser, loginUser, logoutUser,getDashboard, getUserProfile,getUserProfileByUsername } from "../controllers/userController.js";
 // import { isUserLoggedIn } from "../middlewares/isUserLoggedIn.js";
 // import { userImageUpload } from "../middlewares/upload.js";
-import { listProductsWithPricing, getProductsByCategoryName } from "../controllers/productController.js";
+import { listProductsWithPricing, getProductsByCategoryName, getProductDetailsBySku } from "../controllers/productController.js";
 import { registerUser, loginUser, verifyUserOTP, logoutUser, updateUserProfile, forgotPassword, verifyPasswordResetOTP, getDashboard, getUserProfile, getUserProfileByUsername, updateProfileImage } from "../controllers/userController.js";
 import { isUserLoggedIn } from "../middlewares/isUserLoggedIn.js";
 import { userImageUpload } from "../middlewares/upload.js";
@@ -43,6 +43,7 @@ router.get("/dashboard", isUserLoggedIn, getDashboard);
 router.get("/profile", isUserLoggedIn, getUserProfile);
 
 router.get("/products", listProductsWithPricing);
+router.get("/product/:sku", getProductDetailsBySku);
 
 router.get("/categories/:categoryname", getProductsByCategoryName);
 

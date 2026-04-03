@@ -759,7 +759,7 @@ export const getProductsByCategoryName = async (req, res) => {
       },
       data: products,
     });
-  } catch (error) {
+    } catch (error) {
     console.error("Products By Category Error:", error);
     return res.status(500).json({
       success: false,
@@ -768,3 +768,80 @@ export const getProductsByCategoryName = async (req, res) => {
     });
   }
 };
+
+export const getProductDetailsBySku = async (req, res) => {
+  try {
+    const { sku } = req.params;
+
+    await deactivateExpiredBatches();
+
+    const productArr = await db
+      .select()
+      .from(productsTable)
+      .where(and(eq(productsTable.sku, sku), eq(productsTable.isActive, true)))
+      .limit(1);
+
+    if (productArr.length === 0) {
+      return res.status(404).json({ success: false, message: "Product not found or currently inactive" });
+    }
+
+    const currProduct = productArr[0];
+
+    const activeBatches = await db
+        .select()
+        .from(productBatchesTable)
+        .where(
+            and(
+                eq(productBatchesTable.productId, currProduct.id),
+                eq(productBatchesTable.isActive, true),
+                gt(productBatchesTable.currentStock, 0),
+                gt(productBatchesTable.expiryDate, sql`CURRENT_DATE`)
+            )
+        )
+        .orderBy(asc(productBatchesTable.expiryDate))
+        .limit(1);
+
+    const nearestBatch = activeBatches[0];
+
+    let pricing = null;
+    if (nearestBatch) {
+        const mrp = Number(nearestBatch.mrp) || 0;
+        const basePrice = Number(nearestBatch.basePrice) || 0;
+        const discount = Number(nearestBatch.discount) || 0;
+        
+        const sellingPriceBeforeTax = basePrice - discount;
+        const cgst = Number(currProduct.cgst) || 0;
+        const sgst = Number(currProduct.sgst) || 0;
+        const igst = Number(currProduct.igst) || 0;
+        const totalTaxPercent = cgst + sgst + igst;
+        
+        const sellingPriceWithTax = sellingPriceBeforeTax + (sellingPriceBeforeTax * totalTaxPercent / 100);
+
+        pricing = {
+            batchId: nearestBatch.id,
+            batchNo: nearestBatch.batchNo,
+            currentStock: Number(nearestBatch.currentStock),
+            mrp: mrp,
+            basePrice: basePrice,
+            discount: discount,
+            finalPrice: Number(sellingPriceWithTax.toFixed(2))
+        };
+    }
+
+    return res.status(200).json({
+        success: true,
+        data: {
+            ...currProduct,
+            pricing: pricing
+        }
+    });
+
+  } catch (error) {
+    console.error("Product Details Error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal Server Error"
+    });
+  }
+};
+
