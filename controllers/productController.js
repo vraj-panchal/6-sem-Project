@@ -10,7 +10,7 @@ import { deactivateExpiredBatches } from "../utils/expiryproducts.js";
 
 export const listProductsWithPricing = async (req, res) => {
   try {
-    // ✅ Validate pagination safely
+    // Validate pagination safely
     const page = Math.max(parseInt(req.query.page) || 1, 1);
     const limit = Math.min(Math.max(parseInt(req.query.limit) || 10, 1), 100);
     const offset = (page - 1) * limit;
@@ -18,7 +18,7 @@ export const listProductsWithPricing = async (req, res) => {
     await deactivateExpiredBatches();
 
 
-    // ✅ Step 1: Rank batches (nearest expiry per product)
+    // Step 1: Rank batches (nearest expiry per product)
     const rankedBatches = db
       .select({
         productId: productBatchesTable.productId,
@@ -45,7 +45,7 @@ export const listProductsWithPricing = async (req, res) => {
       )
       .as("rankedBatches");
 
-    // ✅ Step 2: Correct count (ONLY products with valid nearest batch)
+    // Step 2: Correct count (ONLY products with valid nearest batch)
     const totalCountResult = await db
       .select({ value: count() })
       .from(productsTable)
@@ -72,7 +72,7 @@ export const listProductsWithPricing = async (req, res) => {
       });
     }
 
-    // ✅ Step 3: Fetch paginated products
+    //  Step 3: Fetch paginated products
     const products = await db
       .select({
         id: productsTable.id,
@@ -137,14 +137,14 @@ export const listProductsWithPricing = async (req, res) => {
 
 export const getAdminProductList = async (req, res) => {
   try {
-    // ✅ Pagination validation
+    //  Pagination validation
     const page = Math.max(parseInt(req.query.page) || 1, 1);
     const limit = Math.min(Math.max(parseInt(req.query.limit) || 10, 1), 100);
     const offset = (page - 1) * limit;
 
     await deactivateExpiredBatches();
 
-    // ✅ 1. Get total product count (admin sees all products)
+    // 1. Get total product count (admin sees all products)
     const totalCountResult = await db
       .select({ value: count(productsTable.id) })
       .from(productsTable);
@@ -165,7 +165,7 @@ export const getAdminProductList = async (req, res) => {
 
 
 
-    // ✅ 2. Fetch paginated grouped products
+    //  2. Fetch paginated grouped products
     const products = await db
       .select({
         id: productsTable.id,
@@ -210,7 +210,7 @@ export const getAdminProductList = async (req, res) => {
       .limit(limit)
       .offset(offset);
 
-    // ✅ 3. Format result
+    // 3. Format result
     const formattedData = products.map(p => ({
       ...p,
       totalInventory: p.totalInventory || 0,
@@ -329,7 +329,7 @@ export const addProduct = async (req, res) => {
       isActive,
     } = result.data;
 
-    // ✅ 1️⃣ Check category exists
+    //  Check category exists
     const category = await db
       .select()
       .from(categoriesTable)
@@ -343,7 +343,7 @@ export const addProduct = async (req, res) => {
       });
     }
 
-    // ✅ 2️⃣ Validate unit against allowedUnits
+    //  Validate unit against allowedUnits
     const allowedUnits = category[0].allowedUnits || [];
 
     if (baseUnit && !allowedUnits.includes(baseUnit)) {
@@ -353,7 +353,7 @@ export const addProduct = async (req, res) => {
       });
     }
 
-    // ✅ 3️⃣ Check duplicate SKU
+    //  Check duplicate SKU
     const existingSku = await db
       .select()
       .from(productsTable)
@@ -367,7 +367,7 @@ export const addProduct = async (req, res) => {
       });
     }
 
-    // ✅ 4️⃣ Insert product
+    // Insert product
     const newProduct = await db
       .insert(productsTable)
       .values({
@@ -761,7 +761,7 @@ export const getProductsByCategoryName = async (req, res) => {
       },
       data: products,
     });
-    } catch (error) {
+  } catch (error) {
     console.error("Products By Category Error:", error);
     return res.status(500).json({
       success: false,
@@ -790,52 +790,52 @@ export const getProductDetailsBySku = async (req, res) => {
     const currProduct = productArr[0];
 
     const activeBatches = await db
-        .select()
-        .from(productBatchesTable)
-        .where(
-            and(
-                eq(productBatchesTable.productId, currProduct.id),
-                eq(productBatchesTable.isActive, true),
-                gt(productBatchesTable.currentStock, 0),
-                gt(productBatchesTable.expiryDate, sql`CURRENT_DATE`)
-            )
+      .select()
+      .from(productBatchesTable)
+      .where(
+        and(
+          eq(productBatchesTable.productId, currProduct.id),
+          eq(productBatchesTable.isActive, true),
+          gt(productBatchesTable.currentStock, 0),
+          gt(productBatchesTable.expiryDate, sql`CURRENT_DATE`)
         )
-        .orderBy(asc(productBatchesTable.expiryDate))
-        .limit(1);
+      )
+      .orderBy(asc(productBatchesTable.expiryDate))
+      .limit(1);
 
     const nearestBatch = activeBatches[0];
 
     let pricing = null;
     if (nearestBatch) {
-        const mrp = Number(nearestBatch.mrp) || 0;
-        const basePrice = Number(nearestBatch.basePrice) || 0;
-        const discount = Number(nearestBatch.discount) || 0;
-        
-        const sellingPriceBeforeTax = basePrice - discount;
-        const cgst = Number(currProduct.cgst) || 0;
-        const sgst = Number(currProduct.sgst) || 0;
-        const igst = Number(currProduct.igst) || 0;
-        const totalTaxPercent = cgst + sgst + igst;
-        
-        const sellingPriceWithTax = sellingPriceBeforeTax + (sellingPriceBeforeTax * totalTaxPercent / 100);
+      const mrp = Number(nearestBatch.mrp) || 0;
+      const basePrice = Number(nearestBatch.basePrice) || 0;
+      const discount = Number(nearestBatch.discount) || 0;
 
-        pricing = {
-            batchId: nearestBatch.id,
-            batchNo: nearestBatch.batchNo,
-            currentStock: Number(nearestBatch.currentStock),
-            mrp: mrp,
-            basePrice: basePrice,
-            discount: discount,
-            finalPrice: Number(sellingPriceWithTax.toFixed(2))
-        };
+      const sellingPriceBeforeTax = basePrice - discount;
+      const cgst = Number(currProduct.cgst) || 0;
+      const sgst = Number(currProduct.sgst) || 0;
+      const igst = Number(currProduct.igst) || 0;
+      const totalTaxPercent = cgst + sgst + igst;
+
+      const sellingPriceWithTax = sellingPriceBeforeTax + (sellingPriceBeforeTax * totalTaxPercent / 100);
+
+      pricing = {
+        batchId: nearestBatch.id,
+        batchNo: nearestBatch.batchNo,
+        currentStock: Number(nearestBatch.currentStock),
+        mrp: mrp,
+        basePrice: basePrice,
+        discount: discount,
+        finalPrice: Number(sellingPriceWithTax.toFixed(2))
+      };
     }
 
     return res.status(200).json({
-        success: true,
-        data: {
-            ...currProduct,
-            pricing: pricing
-        }
+      success: true,
+      data: {
+        ...currProduct,
+        pricing: pricing
+      }
     });
 
   } catch (error) {

@@ -8,7 +8,7 @@ import { adjustStockSchema } from "../validations/adjuststockValidator.js";
 import { updateProductBatchSchema, createProductBatchSchema } from "../validations/productbatchValidator.js";
 
 
-//1️⃣ List batches
+// List batches
 
 export const listBatches = async (req, res) => {
   try {
@@ -99,7 +99,7 @@ export const listallBatches = async (req, res) => {
   }
 };
 
-// 🟦 Get single specific batch detail by Batch ID
+// Get single specific batch detail by Batch ID
 export const getSingleBatchDetails = async (req, res) => {
   try {
     const { id } = req.params;
@@ -153,7 +153,7 @@ export const getSingleBatchDetails = async (req, res) => {
   }
 };
 
-// 2️⃣CREATE BATCH
+// CREATE BATCH
 export const createProductBatch = async (req, res) => {
   try {
     const result = createProductBatchSchema.safeParse(req.body);
@@ -176,7 +176,7 @@ export const createProductBatch = async (req, res) => {
     } = result.data;
 
     await db.transaction(async (tx) => {
-      // 1️⃣ Check product exists
+      //  Check product exists
       const product = await tx
         .select()
         .from(productsTable)
@@ -187,7 +187,7 @@ export const createProductBatch = async (req, res) => {
         throw new Error("Product not found");
       }
 
-      // 2️⃣ Check duplicate batch for same product
+      //  Check duplicate batch for same product
       const existingBatch = await tx
         .select()
         .from(productBatchesTable)
@@ -203,7 +203,7 @@ export const createProductBatch = async (req, res) => {
         throw new Error("Batch already exists for this product");
       }
 
-      // 3️⃣ Insert batch
+      //  Insert batch
       const newBatch = await tx
         .insert(productBatchesTable)
         .values({
@@ -219,7 +219,7 @@ export const createProductBatch = async (req, res) => {
 
       const batchId = newBatch[0].id;
 
-      // 4️⃣ Insert transaction log (restock)
+      //  Insert transaction log (restock)
       await tx.insert(productTransactionsTable).values({
         batchId,
         transactionType: "restock",
@@ -244,12 +244,12 @@ export const createProductBatch = async (req, res) => {
   }
 };
 
-//3️⃣ update batch details (mrp, basePrice, expiryDate)
+// update batch details (mrp, basePrice, expiryDate)
 export const updateBatch = async (req, res) => {
   try {
     const { id } = req.params;
-    
-    // 1️⃣ Validate body
+
+    // Validate body
     const result = updateProductBatchSchema.safeParse(req.body);
     if (!result.success) {
       return res.status(400).json({
@@ -262,10 +262,10 @@ export const updateBatch = async (req, res) => {
 
     // Reject empty updates
     if (expiryDate === undefined && mrp === undefined && basePrice === undefined && discount === undefined) {
-       return res.status(400).json({
-         success: false,
-         message: "No valid fields provided. Please check your spelling (e.g. use 'basePrice' not 'base_price')."
-       });
+      return res.status(400).json({
+        success: false,
+        message: "No valid fields provided. Please check your spelling (e.g. use 'basePrice' not 'base_price')."
+      });
     }
 
     const updatedBatch = await db
@@ -299,7 +299,7 @@ export const updateBatch = async (req, res) => {
   }
 };
 
-//4️⃣ Deactivate batch (soft delete)
+// Deactivate batch (soft delete)
 export const deactivateBatch = async (req, res) => {
   try {
     const { id } = req.params;
@@ -330,13 +330,13 @@ export const deactivateBatch = async (req, res) => {
   }
 };
 
-//🟥Adjust stock
+//Adjust stock
 
 export const adjustBatchStock = async (req, res) => {
   try {
     const { id } = req.params;
 
-    // 1️⃣ Validate input
+    //  Validate input
     const result = adjustStockSchema.safeParse(req.body);
 
     if (!result.success) {
@@ -349,7 +349,7 @@ export const adjustBatchStock = async (req, res) => {
     const { newStock, remarks } = result.data;
 
     await db.transaction(async (tx) => {
-      // 2️⃣ Fetch batch
+      //  Fetch batch
       const batch = await tx
         .select()
         .from(productBatchesTable)
@@ -364,17 +364,17 @@ export const adjustBatchStock = async (req, res) => {
       const total = newStock; // directly set
       const difference = newStock - previousStock;
 
-     
 
 
-      // 3️⃣ Update stock
+
+      //  Update stock
       await tx
         .update(productBatchesTable)
         .set({ currentStock: total })
         .where(eq(productBatchesTable.id, Number(id)));
-      
 
-      // 4️⃣ Insert transaction log
+
+      //  Insert transaction log
       await tx.insert(productTransactionsTable).values({
         batchId: Number(id),
         transactionType: "adjustment",
@@ -384,9 +384,9 @@ export const adjustBatchStock = async (req, res) => {
         performedBy: req.admin?.id || null,
         remarks,
       });
-      
 
-     
+
+
     });
 
     return res.status(200).json({
