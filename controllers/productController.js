@@ -80,6 +80,7 @@ export const listProductsWithPricing = async (req, res) => {
         imageUrl: productsTable.imageUrl,
         sku: productsTable.sku,
         unit: productsTable.unit,
+        categoryName: categoriesTable.name,
         batchNo: rankedBatches.batchNo,
         expiryDate: rankedBatches.expiryDate,
         stock: rankedBatches.stock,
@@ -104,6 +105,7 @@ export const listProductsWithPricing = async (req, res) => {
           sql`${rankedBatches.rowNumber} = 1`
         )
       )
+      .leftJoin(categoriesTable, eq(productsTable.categoryId, categoriesTable.id))
       .where(eq(productsTable.isActive, true))
       .orderBy(asc(productsTable.productName))
       .limit(limit)
