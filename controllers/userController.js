@@ -299,7 +299,7 @@ export const updateUserProfile = async (req, res) => {
       });
     }
 
-    const userID = req.user.user_id;
+    const userID = req.user.id;
     const { phonenumber, profile_image, password, old_password } = validation.data;
 
     // 2. Fetch current user data from DB
@@ -386,10 +386,38 @@ export const getDashboard = async (req, res) => {
 };
 
 export const getUserProfile = async (req, res) => {
-  res.status(200).json({
-    success: true,
-    data: req.user,
-  });
+  try {
+    const userId = req.user.id;
+
+    const user = await db
+      .select({
+        id: userTable.id,
+        username: userTable.username,
+        email: userTable.email,
+        phonenumber: userTable.phonenumber,
+        profile_image: userTable.profile_image,
+        saved_address: userTable.saved_address,
+        saved_city: userTable.saved_city,
+        saved_pincode: userTable.saved_pincode,
+        saved_phone: userTable.saved_phone,
+        last_login: userTable.last_login,
+        created_at: userTable.created_at,
+      })
+      .from(userTable)
+      .where(eq(userTable.id, userId))
+      .limit(1);
+
+    if (!user.length) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: user[0],
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
 };
 
 export const getUserProfileByUsername = async (req, res) => {
@@ -421,7 +449,7 @@ export const getUserProfileByUsername = async (req, res) => {
 
 export const updateProfileImage = async (req, res) => {
   try {
-    const userId = req.user.user_id; // from isUserLoggedIn
+    const userId = req.user.id; // from isUserLoggedIn
     const newImage = req.file ? req.file.path : null;
 
     if (!newImage) {
