@@ -124,7 +124,7 @@ export const checkoutCOD = async (req, res) => {
 // ==================== GET SAVED ADDRESS (Auto-fill on Order Page) ====================
 export const getSavedAddress = async (req, res) => {
   try {
-    const userId = req.user.user_id;
+    const userId = req.user.id;
 
     const user = await db
       .select({
@@ -162,7 +162,7 @@ export const getSavedAddress = async (req, res) => {
 // User fills address + quantity directly on a product and places order
 export const placeDirectOrder = async (req, res) => {
   try {
-    const userId = req.user.user_id;
+    const userId = req.user.id;
 
     const { sku, quantity, deliveryAddress, deliveryCity, deliveryPincode, deliveryPhone } = req.body;
 
@@ -317,7 +317,7 @@ export const placeDirectOrder = async (req, res) => {
 // ==================== GET MY ORDERS (User sees their order history) ====================
 export const getMyOrders = async (req, res) => {
   try {
-    const userId = req.user.user_id;
+    const userId = req.user.id;
 
     const orders = await db
       .select({
