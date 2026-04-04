@@ -10,11 +10,27 @@ import { userTable } from "../src/db/schema/users.js";
 export const checkoutCOD = async (req, res) => {
   try {
     const userId = req.user.id;
-    const { deliveryAddress } = req.body;
+    const { deliveryAddress, deliveryCity, deliveryPincode, deliveryPhone } = req.body;
 
-    if (!deliveryAddress) {
-      return res.status(400).json({ success: false, message: "Delivery address is required" });
+    if (!deliveryAddress) return res.status(400).json({ success: false, message: "Delivery address is required" });
+    if (!deliveryCity) return res.status(400).json({ success: false, message: "Delivery city is required" });
+    if (!deliveryPincode) return res.status(400).json({ success: false, message: "Delivery pincode is required" });
+    if (!deliveryPhone) return res.status(400).json({ success: false, message: "Delivery phone number is required" });
+
+    // ── Auto-fetch username as deliveryName from DB ──
+    const userRecord = await db
+      .select({ username: userTable.username })
+      .from(userTable)
+      .where(eq(userTable.id, userId))
+      .limit(1);
+
+    if (!userRecord.length) {
+      return res.status(404).json({ success: false, message: "User not found" });
     }
+    const deliveryName = userRecord[0].username;
+
+    // Full delivery address string for the order record
+    const fullDeliveryAddress = `${deliveryName} | ${deliveryPhone} | ${deliveryAddress}, ${deliveryCity} - ${deliveryPincode}`;
 
     // 1. Get the user's cart
     const cart = await db.select().from(cartTable).where(eq(cartTable.userId, userId));
@@ -83,7 +99,7 @@ export const checkoutCOD = async (req, res) => {
         subtotal: String(subtotal),
         totalTax: String(totalTax),
         finalAmount: String(finalAmount),
-        deliveryAddress,
+        deliveryAddress: fullDeliveryAddress,
         paymentType: "COD",
         status: "pending",
       }).returning();
@@ -110,6 +126,17 @@ export const checkoutCOD = async (req, res) => {
 
       // Clear User Cart
       await tx.delete(cartItemsTable).where(eq(cartItemsTable.cartId, cartId));
+
+      // Auto-save delivery info to user profile for next time
+      await tx
+        .update(userTable)
+        .set({
+          saved_address: deliveryAddress,
+          saved_city: deliveryCity,
+          saved_pincode: deliveryPincode,
+          saved_phone: deliveryPhone,
+        })
+        .where(eq(userTable.id, userId));
     });
 
     return res.status(200).json({ success: true, message: "Order placed successfully! (Cash On Delivery)" });
