@@ -21,7 +21,7 @@ export const registerUser = async (req, res) => {
       });
     }
 
-    const image = req.file?.filename || "default-profile.png";
+    const image = req.file ? `/image/userimage/${req.file.filename}` : "/default-profile.png";
     const { username, email, phonenumber, password } = result.data;
 
     //  Get role
@@ -288,7 +288,7 @@ export const updateUserProfile = async (req, res) => {
       old_password: req.body.old_password || undefined,
       password: req.body.password || undefined,
       phonenumber: req.body.phonenumber || undefined,
-      profile_image: req.file ? req.file.filename : undefined,
+      profile_image: req.file ? `/image/userimage/${req.file.filename}` : undefined,
     };
 
     const validation = updateUserSchema.safeParse(dataToValidate);
@@ -422,7 +422,7 @@ export const getUserProfileByUsername = async (req, res) => {
 export const updateProfileImage = async (req, res) => {
   try {
     const userId = req.user.user_id; // from isUserLoggedIn
-    const newImage = req.file?.filename;
+    const newImage = req.file ? `/image/userimage/${req.file.filename}` : null;
 
     if (!newImage) {
       return res.status(400).json({ success: false, message: "No image uploaded" });
@@ -436,7 +436,7 @@ export const updateProfileImage = async (req, res) => {
     return res.status(200).json({
       success: true,
       message: "Profile image updated!",
-      imageUrl: `/image/userimage/${newImage}`
+      imageUrl: newImage
     });
   } catch (err) {
     return res.status(500).json({ success: false, message: err.message });

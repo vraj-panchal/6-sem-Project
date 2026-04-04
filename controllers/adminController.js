@@ -69,7 +69,7 @@ export const getAdminProfileByUsername = async (req, res) => {
 export const updateProfileImage = async (req, res) => {
   try {
     const adminId = req.admin.id; // Corrected from req.user.id
-    const newImage = req.file?.filename;
+    const newImage = req.file ? `/image/adminimage/${req.file.filename}` : null;
 
     if (!newImage) {
       return res.status(400).json({ success: false, message: "No image uploaded" });
@@ -83,7 +83,7 @@ export const updateProfileImage = async (req, res) => {
     return res.status(200).json({
       success: true,
       message: "Profile image updated!",
-      imageUrl: `/image/adminimage/${newImage}`
+      imageUrl: newImage
     });
   } catch (err) {
     return res.status(500).json({ success: false, message: err.message });
@@ -214,7 +214,7 @@ export const registerAdmin = async (req, res) => {
     }
 
     const { username, email, phonenumber, password } = result.data;
-    const image = req.file?.filename || "default-profile.png";
+    const image = req.file ? `/image/adminimage/${req.file.filename}` : "/default-profile.png";
 
     // Get role
     const role = await db.select().from(rolesTable).where(eq(rolesTable.name, "admin")).limit(1);

@@ -26,7 +26,7 @@ export const registerEmployee = async (req, res) => {
       });
     }
 
-    const image = req.file?.filename || "default-profile.png";
+    const image = req.file ? `/image/employeeimage/${req.file.filename}` : "/default-profile.png";
     const { username, email, phonenumber, password } = result.data;
 
     // role = employee
@@ -313,7 +313,7 @@ export const getEmployeeProfileByUsername = async (req, res) => {
 export const updateProfileImage = async (req, res) => {
   try {
     const employeeId = req.employee.id; // from isEmployeeLoggedIn
-    const newImage = req.file?.filename;
+    const newImage = req.file ? `/image/employeeimage/${req.file.filename}` : null;
 
     if (!newImage) {
       return res.status(400).json({ success: false, message: "No image uploaded" });
@@ -327,7 +327,7 @@ export const updateProfileImage = async (req, res) => {
     return res.status(200).json({
       success: true,
       message: "Profile image updated!",
-      imageUrl: `/image/employeeimage/${newImage}`
+      imageUrl: newImage
     });
   } catch (err) {
     return res.status(500).json({ success: false, message: err.message });
