@@ -29,12 +29,12 @@ dotenv.config();
 const router = express.Router();
 const upload = multer();
 
-// 🟢 Basic Connectivity Test
+// Basic Connectivity Test
 router.get("/status", (req, res) => {
-  res.send("✅ User Router is working");
+  res.send("User Router is working");
 });
 
-// 🟢 Auth Routes
+// Auth Routes
 router.post("/register", userImageUpload.single("profile_image"), registerUser);
 router.post("/login", upload.none(), loginUser);
 router.post("/verify-otp", upload.none(), verifyUserOTP);
@@ -42,25 +42,25 @@ router.post("/logout", logoutUser);
 router.put("/forgot-password", upload.none(), forgotPassword);
 router.put("/reset-password-verify", upload.none(), verifyPasswordResetOTP);
 
-// 🟢 Profile & Dashboard Routes
+// Profile & Dashboard Routes
 router.get("/dashboard", isUserLoggedIn, getDashboard);
 router.get("/profile", isUserLoggedIn, getUserProfile); // <--- THIS is the My Profile API
 router.put("/update-profile", isUserLoggedIn, userImageUpload.single("profile_image"), updateUserProfile);
 router.put("/profile/update-image", isUserLoggedIn, userImageUpload.single("profile_image"), updateProfileImage);
 router.get("/public/:username", getUserProfileByUsername);
 
-// 🟢 Product Routes
+// Product Routes
 router.get("/products", listProductsWithPricing);
 router.get("/product/:sku", getProductDetailsBySku);
 router.get("/categories/:categoryname", getProductsByCategoryName);
 
-// 🟢 Cart Routes
+// Cart Routes
 router.get("/cart", isUserLoggedIn, getCart);
 router.post("/cart", isUserLoggedIn, addToCart);
 router.put("/cart", isUserLoggedIn, updateCartQuantity);
 router.delete("/cart/:itemId", isUserLoggedIn, removeFromCart);
 
-// 🟢 Order Routes
+// Order Routes
 router.get("/order/saved-address", isUserLoggedIn, getSavedAddress);
 router.post("/order/direct", isUserLoggedIn, placeDirectOrder);
 router.post("/order/checkout", isUserLoggedIn, checkoutCOD);

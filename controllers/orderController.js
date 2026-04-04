@@ -6,7 +6,7 @@ import { productBatchesTable } from "../src/db/schema/productBatches.js";
 import { productsTable } from "../src/db/schema/product.js";
 import { userTable } from "../src/db/schema/users.js";
 
-// ==================== CHECKOUT FROM CA      RT (COD) ====================
+// CHECKOUT FROM CART (COD)
 export const checkoutCOD = async (req, res) => {
   try {
     const userId = req.user.id;
@@ -17,7 +17,7 @@ export const checkoutCOD = async (req, res) => {
     if (!deliveryPincode) return res.status(400).json({ success: false, message: "Delivery pincode is required" });
     if (!deliveryPhone) return res.status(400).json({ success: false, message: "Delivery phone number is required" });
 
-    // ── Auto-fetch username as deliveryName from DB ──
+    // Auto-fetch username as deliveryName from DB
     const userRecord = await db
       .select({ username: userTable.username })
       .from(userTable)
@@ -117,7 +117,7 @@ export const checkoutCOD = async (req, res) => {
           totalItemPrice: item.totalItemPrice,
         });
 
-        // ✅ Deduct stock from batch
+        // Deduct stock from batch
         await tx
           .update(productBatchesTable)
           .set({ currentStock: sql`${productBatchesTable.currentStock} - ${item.quantity}` })
@@ -148,7 +148,7 @@ export const checkoutCOD = async (req, res) => {
 };
 
 
-// ==================== GET SAVED ADDRESS (Auto-fill on Order Page) ====================
+// GET SAVED ADDRESS (Auto-fill on Order Page)
 export const getSavedAddress = async (req, res) => {
   try {
     const userId = req.user.id;
@@ -158,6 +158,8 @@ export const getSavedAddress = async (req, res) => {
         username: userTable.username,
         saved_address: userTable.saved_address,
         saved_phone: userTable.saved_phone,
+        saved_city: userTable.saved_city,
+        saved_pincode: userTable.saved_pincode,
       })
       .from(userTable)
       .where(eq(userTable.id, userId))
@@ -185,7 +187,7 @@ export const getSavedAddress = async (req, res) => {
 };
 
 
-// ==================== DIRECT ORDER (BUY NOW - SINGLE PRODUCT) ====================
+// DIRECT ORDER (BUY NOW - SINGLE PRODUCT)
 // User fills address + quantity directly on a product and places order
 export const placeDirectOrder = async (req, res) => {
   try {
@@ -193,7 +195,7 @@ export const placeDirectOrder = async (req, res) => {
 
     const { sku, quantity, deliveryAddress, deliveryCity, deliveryPincode, deliveryPhone } = req.body;
 
-    // ── Validate required fields ──
+    // Validate required fields
     if (!sku) return res.status(400).json({ success: false, message: "Product SKU is required" });
     if (!quantity || Number(quantity) <= 0) return res.status(400).json({ success: false, message: "Quantity must be greater than 0" });
     if (!deliveryAddress) return res.status(400).json({ success: false, message: "Delivery address is required" });
@@ -201,7 +203,7 @@ export const placeDirectOrder = async (req, res) => {
     if (!deliveryPincode) return res.status(400).json({ success: false, message: "Delivery pincode is required" });
     if (!deliveryPhone) return res.status(400).json({ success: false, message: "Delivery phone number is required" });
 
-    // ── Auto-fetch username as deliveryName from DB ──
+    // Auto-fetch username as deliveryName from DB
     const userRecord = await db
       .select({ username: userTable.username })
       .from(userTable)
@@ -213,7 +215,7 @@ export const placeDirectOrder = async (req, res) => {
     }
     const deliveryName = userRecord[0].username;
 
-    // ── Find product by SKU ──
+    // Find product by SKU
     const product = await db
       .select()
       .from(productsTable)
@@ -228,7 +230,7 @@ export const placeDirectOrder = async (req, res) => {
       return res.status(400).json({ success: false, message: "This product is currently unavailable" });
     }
 
-    // ── Find the nearest valid batch (not expired, has stock, is active) ──
+    // Find the nearest valid batch (not expired, has stock, is active)
     const batch = await db
       .select()
       .from(productBatchesTable)
@@ -249,7 +251,7 @@ export const placeDirectOrder = async (req, res) => {
 
     const selectedBatch = batch[0];
 
-    // ── Validate requested quantity against available stock ──
+    // Validate requested quantity against available stock
     if (Number(quantity) > Number(selectedBatch.currentStock)) {
       return res.status(400).json({
         success: false,
@@ -257,7 +259,7 @@ export const placeDirectOrder = async (req, res) => {
       });
     }
 
-    // ── Calculate pricing ──
+    // Calculate pricing
     const pricePerUnit = Number(selectedBatch.basePrice) - Number(selectedBatch.discount);
     const totalItemPrice = pricePerUnit * Number(quantity);
     const taxPercentage = Number(product[0].cgst) + Number(product[0].sgst) + Number(product[0].igst);
@@ -270,7 +272,7 @@ export const placeDirectOrder = async (req, res) => {
     // Full delivery address string for the order record
     const fullDeliveryAddress = `${deliveryName} | ${deliveryPhone} | ${deliveryAddress}, ${deliveryCity} - ${deliveryPincode}`;
 
-    // ── Create Order in a DB transaction ──
+    // Create Order in a DB transaction
     let newOrderId;
     await db.transaction(async (tx) => {
       // Insert the Order
@@ -341,7 +343,7 @@ export const placeDirectOrder = async (req, res) => {
 };
 
 
-// ==================== GET MY ORDERS (User sees their order history) ====================
+// GET MY ORDERS (User sees their order history)
 export const getMyOrders = async (req, res) => {
   try {
     const userId = req.user.id;
