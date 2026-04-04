@@ -6,7 +6,7 @@ import { categoriesTable } from "./categories.js";
 import { productBatchesTable } from "./productBatches.js";
 import { productTransactionsTable, transactionTypeEnum } from "./productTransactions.js";
 import { cartTable, cartItemsTable } from "./cart.js";
-import { ordersTable, orderItemsTable, orderStatusEnum } from "./orders2.js";
+import { ordersTable, orderItemsTable, orderStatusEnum } from "./orders.js";
 
 export { 
     rolesTable, user_status, userTable, 

@@ -1,11 +1,11 @@
 import { eq, and, gt, sql } from "drizzle-orm";
 import { db } from "../config/db.js";
 import { cartTable, cartItemsTable } from "../src/db/schema/cart.js";
-import { ordersTable, orderItemsTable } from "../src/db/schema/orders2.js";
+import { ordersTable, orderItemsTable } from "../src/db/schema/orders.js";
 import { productBatchesTable } from "../src/db/schema/productBatches.js";
 import { productsTable } from "../src/db/schema/product.js";
 
-// ==================== CHECKOUT FROM CART (COD) ====================
+// ==================== CHECKOUT FROM CA      RT (COD) ====================
 export const checkoutCOD = async (req, res) => {
   try {
     const userId = req.user.id;
