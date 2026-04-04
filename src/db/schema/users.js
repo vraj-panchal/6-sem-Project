@@ -12,8 +12,14 @@ export const userTable = pgTable("users", {
   role_id: integer().references(() => rolesTable.id).notNull(),
   status_id: integer().references(() => user_status.id).notNull(),
 
-  created_at: timestamp().defaultNow().notNull(),   //  OK
+  // Saved delivery info — auto-filled on next order
+  saved_address: varchar({ length: 500 }).default(null),
+  saved_city: varchar({ length: 100 }).default(null),
+  saved_pincode: varchar({ length: 10 }).default(null),
+  saved_phone: varchar({ length: 20 }).default(null),
+
+  created_at: timestamp().defaultNow().notNull(),
   updated_at: timestamp().defaultNow().$onUpdate(() => new Date()).notNull(),
-  last_login: timestamp(), // New field
+  last_login: timestamp(),
 
 });

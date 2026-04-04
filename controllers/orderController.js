@@ -4,6 +4,7 @@ import { cartTable, cartItemsTable } from "../src/db/schema/cart.js";
 import { ordersTable, orderItemsTable } from "../src/db/schema/orders.js";
 import { productBatchesTable } from "../src/db/schema/productBatches.js";
 import { productsTable } from "../src/db/schema/product.js";
+import { userTable } from "../src/db/schema/users.js";
 
 // ==================== CHECKOUT FROM CA      RT (COD) ====================
 export const checkoutCOD = async (req, res) => {
@@ -120,20 +121,70 @@ export const checkoutCOD = async (req, res) => {
 };
 
 
+// ==================== GET SAVED ADDRESS (Auto-fill on Order Page) ====================
+export const getSavedAddress = async (req, res) => {
+  try {
+    const userId = req.user.user_id;
+
+    const user = await db
+      .select({
+        username: userTable.username,
+        saved_address: userTable.saved_address,
+        saved_phone: userTable.saved_phone,
+      })
+      .from(userTable)
+      .where(eq(userTable.id, userId))
+      .limit(1);
+
+    if (!user.length) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        deliveryName: user[0].username,
+        deliveryPhone: user[0].saved_phone,
+        deliveryAddress: user[0].saved_address,
+        deliveryCity: user[0].saved_city,
+        deliveryPincode: user[0].saved_pincode,
+      },
+    });
+
+  } catch (error) {
+    console.error("Get Saved Address Error:", error);
+    return res.status(500).json({ success: false, message: "Internal server error" });
+  }
+};
+
+
 // ==================== DIRECT ORDER (BUY NOW - SINGLE PRODUCT) ====================
 // User fills address + quantity directly on a product and places order
 export const placeDirectOrder = async (req, res) => {
   try {
     const userId = req.user.user_id;
 
-    const { sku, quantity, deliveryAddress, deliveryName, deliveryPhone } = req.body;
+    const { sku, quantity, deliveryAddress, deliveryCity, deliveryPincode, deliveryPhone } = req.body;
 
     // ── Validate required fields ──
     if (!sku) return res.status(400).json({ success: false, message: "Product SKU is required" });
     if (!quantity || Number(quantity) <= 0) return res.status(400).json({ success: false, message: "Quantity must be greater than 0" });
     if (!deliveryAddress) return res.status(400).json({ success: false, message: "Delivery address is required" });
-    if (!deliveryName) return res.status(400).json({ success: false, message: "Delivery name is required" });
+    if (!deliveryCity) return res.status(400).json({ success: false, message: "Delivery city is required" });
+    if (!deliveryPincode) return res.status(400).json({ success: false, message: "Delivery pincode is required" });
     if (!deliveryPhone) return res.status(400).json({ success: false, message: "Delivery phone number is required" });
+
+    // ── Auto-fetch username as deliveryName from DB ──
+    const userRecord = await db
+      .select({ username: userTable.username })
+      .from(userTable)
+      .where(eq(userTable.id, userId))
+      .limit(1);
+
+    if (!userRecord.length) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+    const deliveryName = userRecord[0].username;
 
     // ── Find product by SKU ──
     const product = await db
@@ -189,8 +240,8 @@ export const placeDirectOrder = async (req, res) => {
     const totalTax = itemTax;
     const finalAmount = subtotal + totalTax;
 
-    // Full delivery address string (name + phone + address combined)
-    const fullDeliveryAddress = `${deliveryName} | ${deliveryPhone} | ${deliveryAddress}`;
+    // Full delivery address string for the order record
+    const fullDeliveryAddress = `${deliveryName} | ${deliveryPhone} | ${deliveryAddress}, ${deliveryCity} - ${deliveryPincode}`;
 
     // ── Create Order in a DB transaction ──
     let newOrderId;
@@ -218,11 +269,22 @@ export const placeDirectOrder = async (req, res) => {
         totalItemPrice: String(finalAmount),
       });
 
-      // ✅ Deduct stock from the batch
+      // Deduct stock from the batch
       await tx
         .update(productBatchesTable)
         .set({ currentStock: sql`${productBatchesTable.currentStock} - ${quantity}` })
         .where(eq(productBatchesTable.id, selectedBatch.id));
+
+      // Auto-save delivery info to user profile for next time
+      await tx
+        .update(userTable)
+        .set({
+          saved_address: deliveryAddress,
+          saved_city: deliveryCity,
+          saved_pincode: deliveryPincode,
+          saved_phone: deliveryPhone,
+        })
+        .where(eq(userTable.id, userId));
     });
 
     return res.status(201).json({

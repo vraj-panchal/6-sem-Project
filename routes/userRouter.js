@@ -9,7 +9,7 @@ import { registerUser, loginUser, verifyUserOTP, logoutUser, updateUserProfile, 
 import { isUserLoggedIn } from "../middlewares/isUserLoggedIn.js";
 import { userImageUpload } from "../middlewares/upload.js";
 import { addToCart, updateCartQuantity, removeFromCart, getCart } from "../controllers/cartController.js";
-import { placeDirectOrder, checkoutCOD, getMyOrders } from "../controllers/orderController.js";
+import { placeDirectOrder, checkoutCOD, getMyOrders, getSavedAddress } from "../controllers/orderController.js";
 
 
 dotenv.config();
@@ -55,9 +55,10 @@ router.put("/cart", isUserLoggedIn, updateCartQuantity);
 router.delete("/cart/:itemId", isUserLoggedIn, removeFromCart);
 
 // Order Routes
-router.post("/order/direct", isUserLoggedIn, placeDirectOrder);  // Buy Now (single product)
-router.post("/order/checkout", isUserLoggedIn, checkoutCOD);       // Checkout from Cart
-router.get("/orders", isUserLoggedIn, getMyOrders);                 // View My Orders
+router.get("/order/saved-address", isUserLoggedIn, getSavedAddress);  // Get saved address for auto-fill
+router.post("/order/direct", isUserLoggedIn, placeDirectOrder);        // Buy Now (single product)
+router.post("/order/checkout", isUserLoggedIn, checkoutCOD);           // Checkout from Cart
+router.get("/orders", isUserLoggedIn, getMyOrders);                    // View My Orders
 
 
 // Public Profile
