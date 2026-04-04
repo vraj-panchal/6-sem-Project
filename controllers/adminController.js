@@ -647,3 +647,20 @@ export const getDashboardStats = async (req, res) => {
     });
   }
 };
+
+// GET ADMIN DASHBOARD
+export const getAdminDashboard = async (req, res) => {
+  res.status(200).json({
+    success: true,
+    message: "Welcome Admin Dashboard",
+    admin: req.admin,
+  });
+};
+
+// GET ADMIN PROFILE
+export const getAdminProfile = async (req, res) => {
+  res.status(200).json({
+    success: true,
+    data: req.admin,
+  });
+};

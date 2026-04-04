@@ -9,6 +9,8 @@ import {
   verifyEmployeePasswordResetOTP,
   updateProfileImage,
   getEmployeeProfileByUsername,
+  // getEmployeeProfile, // Add these if you want to standardize
+  // getEmployeeDashboard
 } from "../controllers/employeeController.js";
 
 import { isAdminLoggedIn } from "../middlewares/isAdminLoggedIn.js";
@@ -19,44 +21,32 @@ import { getProductsByCategoryName } from "../controllers/productController.js";
 const router = express.Router();
 const upload = multer();
 
-router.get("/", (req, res) => {
-  res.send("Hello Employee rout Working ...");
-})
+// Basic Connectivity Test
+router.get("/status", (req, res) => {
+  res.send("Employee Router is working");
+});
 
-// ADMIN hires employee
-router.post(
-  "/register",
-  isAdminLoggedIn,
-  employeeImageUpload.single("profile_image"),
-  registerEmployee
-);
+// Admin Actions on Employees
+router.post("/register", isAdminLoggedIn, employeeImageUpload.single("profile_image"), registerEmployee);
 
-// EMPLOYEE login
-router.post("/login",upload.none(), loginEmployee);
+// Auth Routes
+router.post("/login", upload.none(), loginEmployee);
 router.post("/verify-otp", upload.none(), verifyEmployeeOTP);
-
-// EMPLOYEE logout
 router.post("/logout", logoutEmployee);
+router.put("/forgot-password", upload.none(), forgotPassword);
+router.put("/reset-password-verify", upload.none(), verifyEmployeePasswordResetOTP);
 
-// EMPLOYEE dashboard
+// Profile & Dashboard Routes
 router.get("/dashboard", isEmployeeLoggedIn, (req, res) => {
   res.status(200).json({
     success: true,
     employee: req.employee,
   });
 });
-
-// Update Profile Image
 router.put("/profile/update-image", isEmployeeLoggedIn, employeeImageUpload.single("profile_image"), updateProfileImage);
+router.get("/public/:username", getEmployeeProfileByUsername);
 
-// Products by category
+// Inventory & Product Access
 router.get("/categories/:categoryname", isEmployeeLoggedIn, getProductsByCategoryName);
-
-// Forgot Password
-router.put("/forgot-password", upload.none(), forgotPassword);
-router.put("/reset-password-verify", upload.none(), verifyEmployeePasswordResetOTP);
-
-// Public Profile
-router.get("/:username", getEmployeeProfileByUsername);
 
 export default router;
