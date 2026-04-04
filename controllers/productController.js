@@ -381,7 +381,7 @@ export const addProduct = async (req, res) => {
         sgst,
         igst,
         description,
-        imageUrl: req.file ? `/image/productsimages/${req.file.filename}` : null,
+        imageUrl: req.file ? req.file.path : null,
         isActive: isActive !== undefined ? isActive : true,
         createdAt: sql`NOW() AT TIME ZONE 'Asia/Kolkata'`,
       })
@@ -421,7 +421,7 @@ export const updateProduct = async (req, res) => {
 
     // Add imageUrl if file is uploaded
     if (req.file) {
-      updatedFields.imageUrl = `/image/productsimages/${req.file.filename}`;
+      updatedFields.imageUrl = req.file.path;
     }
 
     // const {

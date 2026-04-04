@@ -1,78 +1,68 @@
 import multer from "multer";
-import path from "path";
-import crypto from "crypto";
+import { v2 as cloudinary } from "cloudinary";
+import { CloudinaryStorage } from "multer-storage-cloudinary";
+import dotenv from "dotenv";
 
-// adminimage upload
+dotenv.config();
 
-const adminImageDiskStorage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, "public/image/adminimage");
-  },
-  filename: (req, file, cb) => {
-    crypto.randomBytes(10, (err, raw) => {
-      if (err) return cb(err);
-      cb(null, raw.toString("hex") + path.extname(file.originalname));
-    });
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+});
+
+// Admin image upload
+const adminStorage = new CloudinaryStorage({
+  cloudinary: cloudinary,
+  params: {
+    folder: "adminimage",
+    allowed_formats: ["jpg", "jpeg", "png", "webp"],
   },
 });
 
 export const adminImageUpload = multer({
-  storage: adminImageDiskStorage,
-  limits: { fileSize: 2 * 1024 * 1024 }, 
+  storage: adminStorage,
+  limits: { fileSize: 2 * 1024 * 1024 },
 });
 
-// userimage upload
-
-const userImageStorage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, "public/image/userimage");
-  },
-  filename: (req, file, cb) => {
-    crypto.randomBytes(12, (err, bytes) => {
-      if (err) return cb(err);
-      cb(null, bytes.toString("hex") + path.extname(file.originalname));
-    });
+// User image upload
+const userStorage = new CloudinaryStorage({
+  cloudinary: cloudinary,
+  params: {
+    folder: "userimage",
+    allowed_formats: ["jpg", "jpeg", "png", "webp"],
   },
 });
 
 export const userImageUpload = multer({
-  storage: userImageStorage,
+  storage: userStorage,
   limits: { fileSize: 2 * 1024 * 1024 },
 });
 
-// employeeimage upload
-
-const employeeImageStorage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, "public/image/employeeimage");
-  },
-  filename: (req, file, cb) => {
-    crypto.randomBytes(12, (err, bytes) => {
-      if (err) return cb(err);
-      cb(null, bytes.toString("hex") + path.extname(file.originalname));
-    });
+// Employee image upload
+const employeeStorage = new CloudinaryStorage({
+  cloudinary: cloudinary,
+  params: {
+    folder: "employeeimage",
+    allowed_formats: ["jpg", "jpeg", "png", "webp"],
   },
 });
 
 export const employeeImageUpload = multer({
-  storage: employeeImageStorage,
+  storage: employeeStorage,
   limits: { fileSize: 2 * 1024 * 1024 },
 });
 
-// productimage upload
-const productImageStorage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, "public/image/productsimages");  
-  },
-  filename: (req, file, cb) => {
-    crypto.randomBytes(12, (err, bytes) => {
-      if (err) return cb(err);
-      cb(null, bytes.toString("hex") + path.extname(file.originalname));
-    });
+// Product image upload
+const productStorage = new CloudinaryStorage({
+  cloudinary: cloudinary,
+  params: {
+    folder: "productsimages",
+    allowed_formats: ["jpg", "jpeg", "png", "webp"],
   },
 });
 
 export const productImageUpload = multer({
-  storage: productImageStorage,
-  limits: { fileSize: 5 * 1024 * 1024 }, 
+  storage: productStorage,
+  limits: { fileSize: 5 * 1024 * 1024 },
 });
