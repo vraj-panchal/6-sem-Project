@@ -103,6 +103,6 @@ router.post("/batches/:id/adjuststock", isAdminLoggedIn, adjustBatchStock);
 // Order Management
 router.get("/orders", isAdminLoggedIn, getAllOrdersForAdmin);
 router.put("/orders/:id/status", isAdminLoggedIn, upload.none(), updateOrderStatus);
-router.put("/orders/:id/assign", isAdminLoggedIn, upload.none(), assignOrderToEmployee);
+router.put("/orders/:id/assign", isAdminLoggedIn, assignOrderToEmployee);
 
 export default router;
