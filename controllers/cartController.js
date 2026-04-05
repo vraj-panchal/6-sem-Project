@@ -96,14 +96,69 @@ export const getCartData = async (userId) => {
 export const addToCart = async (req, res) => {
     try {
         const userId = req.user.id;
-        const { productId, quantity } = req.body;
+        const { productId, quantity, batchId } = req.body;
         const qtyToAdd = Number(quantity);
 
         if (!productId || !qtyToAdd || qtyToAdd <= 0) {
             return res.status(400).json({ success: false, message: "Valid Product ID and Quantity are required" });
         }
 
-        // 1. Find all valid active batches for this product
+        // 1. Find or Create User Cart
+        let cart = await db.select().from(cartTable).where(eq(cartTable.userId, userId));
+        if (cart.length === 0) {
+            cart = await db.insert(cartTable).values({ userId }).returning();
+        }
+        const cartId = cart[0].id;
+
+        // --- OPTION A: DIRECT BATCH SELECTION (For Variants like Milk size) ---
+        if (batchId) {
+            const specificBatch = await db
+                .select()
+                .from(productBatchesTable)
+                .where(
+                    and(
+                        eq(productBatchesTable.id, Number(batchId)),
+                        eq(productBatchesTable.productId, Number(productId)),
+                        eq(productBatchesTable.isActive, true),
+                        gt(productBatchesTable.expiryDate, sql`CURRENT_DATE`)
+                    )
+                )
+                .limit(1);
+
+            if (specificBatch.length === 0) {
+                return res.status(400).json({ success: false, message: "Selected version is invalid or out of stock" });
+            }
+
+            const batch = specificBatch[0];
+            const batchStock = Number(batch.currentStock);
+
+            if (batchStock < qtyToAdd) {
+                return res.status(400).json({ success: false, message: `Insufficient stock. Only ${batchStock} items left.` });
+            }
+
+            const existingItem = await db
+                .select()
+                .from(cartItemsTable)
+                .where(and(eq(cartItemsTable.cartId, cartId), eq(cartItemsTable.batchId, batch.id)));
+
+            if (existingItem.length > 0) {
+                await db
+                    .update(cartItemsTable)
+                    .set({ quantity: String(Number(existingItem[0].quantity) + qtyToAdd) })
+                    .where(eq(cartItemsTable.id, existingItem[0].id));
+            } else {
+                await db.insert(cartItemsTable).values({
+                    cartId,
+                    batchId: batch.id,
+                    quantity: String(qtyToAdd),
+                });
+            }
+
+            const updatedCart = await getCartData(userId);
+            return res.status(200).json({ success: true, message: "Item added to cart successfully", data: updatedCart });
+        }
+
+        // --- OPTION B: SMART FEFO SPLITTING (Automated) ---
         const allAvailableBatches = await db
             .select()
             .from(productBatchesTable)
@@ -123,35 +178,21 @@ export const addToCart = async (req, res) => {
             return res.status(400).json({ success: false, message: "Not enough total stock available for this product" });
         }
 
-        // 2. Find or Create User Cart
-        let cart = await db.select().from(cartTable).where(eq(cartTable.userId, userId));
-        if (cart.length === 0) {
-            cart = await db.insert(cartTable).values({ userId }).returning();
-        }
-        const cartId = cart[0].id;
-
-        // 3. Fill the quantity across multiple batches if necessary (FEFO)
         let remainingQty = qtyToAdd;
-
         for (const batch of allAvailableBatches) {
             if (remainingQty <= 0) break;
 
             const batchStock = Number(batch.currentStock);
             const qtyFromThisBatch = Math.min(remainingQty, batchStock);
 
-            // Check if this batch item already exists in the cart
             const existingItem = await db
                 .select()
                 .from(cartItemsTable)
                 .where(and(eq(cartItemsTable.cartId, cartId), eq(cartItemsTable.batchId, batch.id)));
 
             if (existingItem.length > 0) {
-                // Check if adding more won't exceed what's in the batch
                 const currentCartQty = Number(existingItem[0].quantity);
-                if (currentCartQty + qtyFromThisBatch > batchStock) {
-                   // This batch is already full in the cart based on real stock
-                   continue; 
-                }
+                if (currentCartQty + qtyFromThisBatch > batchStock) continue;
 
                 await db
                     .update(cartItemsTable)
