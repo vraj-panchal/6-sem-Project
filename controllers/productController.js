@@ -792,9 +792,10 @@ export const getProductDetailsBySku = async (req, res) => {
     }
 
     const currProduct = productArr[0];
+    const today = new Date().toISOString().split("T")[0];
 
-    // Fetch only the nearest valid batch
-    const activeBatches = await db
+    // Fetch all valid active batches
+    const allValidBatches = await db
       .select()
       .from(productBatchesTable)
       .where(
@@ -805,16 +806,15 @@ export const getProductDetailsBySku = async (req, res) => {
           gt(productBatchesTable.expiryDate, sql`CURRENT_DATE`)
         )
       )
-      .orderBy(asc(productBatchesTable.expiryDate))
-      .limit(1);
+      .orderBy(asc(productBatchesTable.expiryDate));
 
-    const nearestBatch = activeBatches[0];
+    const totalAvailableStock = allValidBatches.reduce((sum, batch) => sum + Number(batch.currentStock), 0);
+    const nearestBatch = allValidBatches[0];
 
     let pricing = null;
-    let stockStatus = "Out of Stock";
+    let stockStatus = totalAvailableStock > 0 ? "In Stock" : "Out of Stock";
 
     if (nearestBatch) {
-      stockStatus = "In Stock";
       const mrp = Number(nearestBatch.mrp) || 0;
       const basePrice = Number(nearestBatch.basePrice) || 0;
       const discount = Number(nearestBatch.discount) || 0;
@@ -827,14 +827,13 @@ export const getProductDetailsBySku = async (req, res) => {
 
       const sellingPriceWithTax = sellingPriceBeforeTax + (sellingPriceBeforeTax * totalTaxPercent / 100);
 
-      // Amazon-style "You Save" calculations
       const savingsAmount = mrp - sellingPriceWithTax;
       const savingsPercentage = mrp > 0 ? (savingsAmount / mrp * 100).toFixed(0) : 0;
 
       pricing = {
         batchId: nearestBatch.id,
         batchNo: nearestBatch.batchNo,
-        currentStock: Number(nearestBatch.currentStock),
+        currentStock: Number(nearestBatch.currentStock), // Stock available in this specific batch
         mrp: mrp,
         basePrice: basePrice,
         discount: discount,
@@ -886,7 +885,14 @@ export const getProductDetailsBySku = async (req, res) => {
           totalTax: `${Number(currProduct.cgst) + Number(currProduct.sgst) + Number(currProduct.igst)}%`
         },
         stockStatus,
+        totalAvailableStock,
         pricing,
+        availableBatches: allValidBatches.map(b => ({
+          batchId: b.id,
+          batchNo: b.batchNo,
+          expiryDate: b.expiryDate,
+          stock: Number(b.currentStock)
+        })),
         similarProducts
       }
     });
