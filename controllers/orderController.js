@@ -555,6 +555,6 @@ export const assignOrderToEmployee = async (req, res) => {
       return res.status(404).json({ success: false, message: error.message });
     }
     console.error("Assign Order Error:", error);
-    return res.status(500).json({ success: false, message: "Internal server error" });
+    return res.status(500).json({ success: false, message: error.message || "Internal server error" });
   }
 };
