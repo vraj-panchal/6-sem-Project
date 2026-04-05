@@ -1,4 +1,4 @@
-import { eq, and, gt, sql } from "drizzle-orm";
+import { eq, and, gt, sql, desc, ne } from "drizzle-orm";
 import { db } from "../config/db.js";
 import { cartTable, cartItemsTable } from "../src/db/schema/cart.js";
 import { ordersTable, orderItemsTable } from "../src/db/schema/orders.js";
@@ -390,6 +390,91 @@ export const getMyOrders = async (req, res) => {
 
   } catch (error) {
     console.error("Get Orders Error:", error);
+    return res.status(500).json({ success: false, message: "Internal server error" });
+  }
+};
+
+
+// GET ALL ORDERS (ADMIN)
+export const getAllOrdersForAdmin = async (req, res) => {
+  try {
+    const orders = await db
+      .select({
+        orderId: ordersTable.id,
+        status: ordersTable.status,
+        subtotal: ordersTable.subtotal,
+        totalTax: ordersTable.totalTax,
+        finalAmount: ordersTable.finalAmount,
+        deliveryAddress: ordersTable.deliveryAddress,
+        paymentType: ordersTable.paymentType,
+        createdAt: ordersTable.createdAt,
+        customerName: userTable.username,
+        customerEmail: userTable.email,
+        customerPhone: userTable.phonenumber,
+      })
+      .from(ordersTable)
+      .leftJoin(userTable, eq(ordersTable.userId, userTable.id))
+      .orderBy(desc(ordersTable.createdAt));
+
+    // Get items for each order
+    const ordersWithItems = await Promise.all(
+      orders.map(async (order) => {
+        const items = await db
+          .select({
+            productName: orderItemsTable.productName,
+            quantity: orderItemsTable.quantity,
+            pricePerUnit: orderItemsTable.pricePerUnit,
+            totalItemPrice: orderItemsTable.totalItemPrice,
+          })
+          .from(orderItemsTable)
+          .where(eq(orderItemsTable.orderId, order.orderId));
+
+        return { ...order, items };
+      })
+    );
+
+    return res.status(200).json({
+      success: true,
+      data: ordersWithItems,
+    });
+  } catch (error) {
+    console.error("Get All Orders (Admin) Error:", error);
+    return res.status(500).json({ success: false, message: "Internal server error" });
+  }
+};
+
+// UPDATE ORDER STATUS (ADMIN)
+export const updateOrderStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+    const adminId = req.admin.id;
+
+    const validStatuses = ["pending", "approved", "packed", "shipped", "delivered", "cancelled", "returned"];
+    if (!validStatuses.includes(status)) {
+      return res.status(400).json({ success: false, message: "Invalid order status" });
+    }
+
+    const updatedOrder = await db
+      .update(ordersTable)
+      .set({ 
+        status: status,
+        processedBy: adminId
+      })
+      .where(eq(ordersTable.id, Number(id)))
+      .returning();
+
+    if (updatedOrder.length === 0) {
+      return res.status(404).json({ success: false, message: "Order not found" });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: `Order status updated to ${status}`,
+      data: updatedOrder[0]
+    });
+  } catch (error) {
+    console.error("Update Order Status Error:", error);
     return res.status(500).json({ success: false, message: "Internal server error" });
   }
 };

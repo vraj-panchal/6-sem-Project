@@ -56,7 +56,6 @@ export const createProductSchema = z.object({
 
   imageUrl: z
     .string()
-    .url("Image URL must be valid")
     .optional(),
 
   description: z

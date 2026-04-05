@@ -778,8 +778,12 @@ export const getProductDetailsBySku = async (req, res) => {
     await deactivateExpiredBatches();
 
     const productArr = await db
-      .select()
+      .select({
+        ...productsTable, // Select all product fields
+        categoryName: categoriesTable.categoryName,
+      })
       .from(productsTable)
+      .leftJoin(categoriesTable, eq(productsTable.categoryId, categoriesTable.id))
       .where(and(eq(productsTable.sku, sku), eq(productsTable.isActive, true)))
       .limit(1);
 
@@ -789,6 +793,7 @@ export const getProductDetailsBySku = async (req, res) => {
 
     const currProduct = productArr[0];
 
+    // Fetch only the nearest valid batch
     const activeBatches = await db
       .select()
       .from(productBatchesTable)
@@ -806,7 +811,10 @@ export const getProductDetailsBySku = async (req, res) => {
     const nearestBatch = activeBatches[0];
 
     let pricing = null;
+    let stockStatus = "Out of Stock";
+
     if (nearestBatch) {
+      stockStatus = "In Stock";
       const mrp = Number(nearestBatch.mrp) || 0;
       const basePrice = Number(nearestBatch.basePrice) || 0;
       const discount = Number(nearestBatch.discount) || 0;
@@ -819,6 +827,10 @@ export const getProductDetailsBySku = async (req, res) => {
 
       const sellingPriceWithTax = sellingPriceBeforeTax + (sellingPriceBeforeTax * totalTaxPercent / 100);
 
+      // Amazon-style "You Save" calculations
+      const savingsAmount = mrp - sellingPriceWithTax;
+      const savingsPercentage = mrp > 0 ? (savingsAmount / mrp * 100).toFixed(0) : 0;
+
       pricing = {
         batchId: nearestBatch.id,
         batchNo: nearestBatch.batchNo,
@@ -826,15 +838,56 @@ export const getProductDetailsBySku = async (req, res) => {
         mrp: mrp,
         basePrice: basePrice,
         discount: discount,
-        finalPrice: Number(sellingPriceWithTax.toFixed(2))
+        finalPrice: Number(sellingPriceWithTax.toFixed(2)),
+        savingsAmount: Number(savingsAmount.toFixed(2)),
+        savingsPercentage: `${savingsPercentage}%`,
+        expiryDate: nearestBatch.expiryDate,
       };
     }
+
+    // Fetch 4 Similar Products from the same category (excluding current)
+    const similarProducts = await db
+      .select({
+        id: productsTable.id,
+        productName: productsTable.productName,
+        sku: productsTable.sku,
+        imageUrl: productsTable.imageUrl,
+        brand: productsTable.brand,
+      })
+      .from(productsTable)
+      .where(
+        and(
+          eq(productsTable.categoryId, currProduct.categoryId),
+          ne(productsTable.id, currProduct.id),
+          eq(productsTable.isActive, true)
+        )
+      )
+      .limit(4);
 
     return res.status(200).json({
       success: true,
       data: {
-        ...currProduct,
-        pricing: pricing
+        id: currProduct.id,
+        productName: currProduct.productName,
+        brand: currProduct.brand,
+        sku: currProduct.sku,
+        description: currProduct.description,
+        imageUrl: currProduct.imageUrl,
+        categoryName: currProduct.categoryName,
+        unit: currProduct.unit,
+        weightInfo: {
+          weight: currProduct.baseWeight,
+          unit: currProduct.baseUnit,
+        },
+        taxDetails: {
+          cgst: `${currProduct.cgst}%`,
+          sgst: `${currProduct.sgst}%`,
+          igst: `${currProduct.igst}%`,
+          totalTax: `${Number(currProduct.cgst) + Number(currProduct.sgst) + Number(currProduct.igst)}%`
+        },
+        stockStatus,
+        pricing,
+        similarProducts
       }
     });
 

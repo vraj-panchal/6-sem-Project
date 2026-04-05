@@ -41,6 +41,10 @@ import {
   deactivateBatch, 
   adjustBatchStock 
 } from "../controllers/productbatchController.js";
+import { 
+  getAllOrdersForAdmin, 
+  updateOrderStatus 
+} from "../controllers/orderController.js";
 
 dotenv.config();
 
@@ -94,5 +98,9 @@ router.post("/batches/add", isAdminLoggedIn, upload.none(), createProductBatch);
 router.put("/batches/update/:id", isAdminLoggedIn, upload.none(), updateBatch);
 router.put("/batches/deactivate/:id", isAdminLoggedIn, upload.none(), deactivateBatch);
 router.post("/batches/:id/adjuststock", isAdminLoggedIn, adjustBatchStock);
+
+// Order Management
+router.get("/orders", isAdminLoggedIn, getAllOrdersForAdmin);
+router.put("/orders/:id/status", isAdminLoggedIn, upload.none(), updateOrderStatus);
 
 export default router;
