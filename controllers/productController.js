@@ -80,7 +80,7 @@ export const listProductsWithPricing = async (req, res) => {
         imageUrl: productsTable.imageUrl,
         sku: productsTable.sku,
         unit: productsTable.unit,
-        categoryName: categoriesTable.name,
+        categoryName: categoriesTable.categoryName,
         batchNo: rankedBatches.batchNo,
         expiryDate: rankedBatches.expiryDate,
         stock: rankedBatches.stock,
