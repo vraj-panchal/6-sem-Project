@@ -8,6 +8,14 @@ import { userTable } from "../src/db/schema/users.js";
 import { orderAssignmentsTable } from "../src/db/schema/orderAssignments.js";
 import { rolesTable } from "../src/db/schema/roles.js";
 
+// HELPER: Generate a custom Order Number (e.g., ORD-240405-X9B)
+const generateOrderNumber = () => {
+  const today = new Date();
+  const datePart = today.toISOString().slice(2, 4) + (today.getMonth() + 1).toString().padStart(2, "0") + today.getDate().toString().padStart(2, "0");
+  const randomPart = Math.random().toString(36).substring(2, 7).toUpperCase();
+  return `ORD-${datePart}-${randomPart}`;
+};
+
 // CHECKOUT FROM CART (COD)
 export const checkoutCOD = async (req, res) => {
   try {
@@ -98,6 +106,7 @@ export const checkoutCOD = async (req, res) => {
       // Create Order
       const newOrder = await tx.insert(ordersTable).values({
         userId,
+        orderNumber: generateOrderNumber(),
         subtotal: String(subtotal),
         totalTax: String(totalTax),
         finalAmount: String(finalAmount),
@@ -275,11 +284,12 @@ export const placeDirectOrder = async (req, res) => {
     const fullDeliveryAddress = `${deliveryName} | ${deliveryPhone} | ${deliveryAddress}, ${deliveryCity} - ${deliveryPincode}`;
 
     // Create Order in a DB transaction
-    let newOrderId;
+    let createdOrder;
     await db.transaction(async (tx) => {
       // Insert the Order
       const newOrder = await tx.insert(ordersTable).values({
         userId,
+        orderNumber: generateOrderNumber(),
         subtotal: String(subtotal),
         totalTax: String(totalTax),
         finalAmount: String(finalAmount),
@@ -288,7 +298,8 @@ export const placeDirectOrder = async (req, res) => {
         status: "pending",
       }).returning();
 
-      newOrderId = newOrder[0].id;
+      createdOrder = newOrder[0];
+      newOrderId = createdOrder.id;
 
       // Insert Order Item
       await tx.insert(orderItemsTable).values({
@@ -323,6 +334,7 @@ export const placeDirectOrder = async (req, res) => {
       message: "Order placed successfully!",
       data: {
         orderId: newOrderId,
+        orderNumber: createdOrder.orderNumber,
         productName: product[0].productName,
         quantity: Number(quantity),
         unit: product[0].unit,
@@ -353,6 +365,7 @@ export const getMyOrders = async (req, res) => {
     const orders = await db
       .select({
         orderId: ordersTable.id,
+        orderNumber: ordersTable.orderNumber,
         status: ordersTable.status,
         subtotal: ordersTable.subtotal,
         totalTax: ordersTable.totalTax,
@@ -403,6 +416,7 @@ export const getAllOrdersForAdmin = async (req, res) => {
     const orders = await db
       .select({
         orderId: ordersTable.id,
+        orderNumber: ordersTable.orderNumber,
         status: ordersTable.status,
         subtotal: ordersTable.subtotal,
         totalTax: ordersTable.totalTax,

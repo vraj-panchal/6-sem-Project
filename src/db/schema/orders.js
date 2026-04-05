@@ -26,6 +26,8 @@ export const ordersTable = pgTable("orders", {
   
   paymentType: varchar("payment_type", { length: 20 }).default("COD"),
   
+  orderNumber: varchar("order_number", { length: 50 }),
+  
   createdAt: timestamp("created_at").defaultNow(),
 });
 
