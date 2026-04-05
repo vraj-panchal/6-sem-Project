@@ -459,7 +459,7 @@ export const updateOrderStatus = async (req, res) => {
 
     const updatedOrder = await db
       .update(ordersTable)
-      .set({ 
+      .set({
         status: status,
         processedBy: adminId
       })
@@ -485,7 +485,7 @@ export const updateOrderStatus = async (req, res) => {
 export const assignOrderToEmployee = async (req, res) => {
   try {
     const { id } = req.params; // orderId
-    const { employeeId } = req.body;
+    const { employeeId } = req.body || {};
     const adminId = req.admin.id;
 
     if (!employeeId) {
