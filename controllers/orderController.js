@@ -284,7 +284,7 @@ export const placeDirectOrder = async (req, res) => {
     const fullDeliveryAddress = `${deliveryName} | ${deliveryPhone} | ${deliveryAddress}, ${deliveryCity} - ${deliveryPincode}`;
 
     // Create Order in a DB transaction
-    let createdOrder;
+    let newOrderId, createdOrder;
     await db.transaction(async (tx) => {
       // Insert the Order
       const newOrder = await tx.insert(ordersTable).values({
