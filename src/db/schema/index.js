@@ -7,11 +7,13 @@ import { productBatchesTable } from "./productBatches.js";
 import { productTransactionsTable, transactionTypeEnum } from "./productTransactions.js";
 import { cartTable, cartItemsTable } from "./cart.js";
 import { ordersTable, orderItemsTable, orderStatusEnum } from "./orders.js";
+import { orderAssignmentsTable, assignmentStatusEnum } from "./orderAssignments.js";
 
 export { 
     rolesTable, user_status, userTable, 
     categoriesTable, productsTable, 
     productBatchesTable, productTransactionsTable, transactionTypeEnum,
     cartTable, cartItemsTable,
-    ordersTable, orderItemsTable, orderStatusEnum
+    ordersTable, orderItemsTable, orderStatusEnum,
+    orderAssignmentsTable, assignmentStatusEnum
 };

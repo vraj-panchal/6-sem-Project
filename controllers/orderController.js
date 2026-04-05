@@ -5,6 +5,8 @@ import { ordersTable, orderItemsTable } from "../src/db/schema/orders.js";
 import { productBatchesTable } from "../src/db/schema/productBatches.js";
 import { productsTable } from "../src/db/schema/product.js";
 import { userTable } from "../src/db/schema/users.js";
+import { orderAssignmentsTable } from "../src/db/schema/orderAssignments.js";
+import { rolesTable } from "../src/db/schema/roles.js";
 
 // CHECKOUT FROM CART (COD)
 export const checkoutCOD = async (req, res) => {
@@ -475,6 +477,84 @@ export const updateOrderStatus = async (req, res) => {
     });
   } catch (error) {
     console.error("Update Order Status Error:", error);
+    return res.status(500).json({ success: false, message: "Internal server error" });
+  }
+};
+
+// ASSIGN ORDER TO EMPLOYEE (ADMIN)
+export const assignOrderToEmployee = async (req, res) => {
+  try {
+    const { id } = req.params; // orderId
+    const { employeeId } = req.body;
+    const adminId = req.admin.id;
+
+    if (!employeeId) {
+      return res.status(400).json({ success: false, message: "Employee ID is required" });
+    }
+
+    // 1. Verify the employee exists and has the 'employee' role
+    const employee = await db
+      .select({
+        id: userTable.id,
+        roleName: rolesTable.name,
+      })
+      .from(userTable)
+      .innerJoin(rolesTable, eq(userTable.role_id, rolesTable.id))
+      .where(and(eq(userTable.id, Number(employeeId)), eq(rolesTable.name, "employee")))
+      .limit(1);
+
+    if (employee.length === 0) {
+      return res.status(404).json({ success: false, message: "Employee not found or invalid role" });
+    }
+
+    // 2. Perform the assignment in a transaction
+    const result = await db.transaction(async (tx) => {
+      // Update the main order's processedBy field
+      const updatedOrder = await tx
+        .update(ordersTable)
+        .set({ processedBy: Number(employeeId) })
+        .where(eq(ordersTable.id, Number(id)))
+        .returning();
+
+      if (updatedOrder.length === 0) {
+        throw new Error("Order not found");
+      }
+
+      // Check for existing active assignment and mark it as reassigned if necessary
+      await tx
+        .update(orderAssignmentsTable)
+        .set({ status: "reassigned" })
+        .where(
+          and(
+            eq(orderAssignmentsTable.orderId, Number(id)),
+            eq(orderAssignmentsTable.status, "assigned")
+          )
+        );
+
+      // Create new assignment record
+      const newAssignment = await tx
+        .insert(orderAssignmentsTable)
+        .values({
+          orderId: Number(id),
+          employeeId: Number(employeeId),
+          assignedBy: adminId,
+          status: "assigned",
+        })
+        .returning();
+
+      return { order: updatedOrder[0], assignment: newAssignment[0] };
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "Order assigned to employee successfully",
+      data: result,
+    });
+  } catch (error) {
+    if (error.message === "Order not found") {
+      return res.status(404).json({ success: false, message: error.message });
+    }
+    console.error("Assign Order Error:", error);
     return res.status(500).json({ success: false, message: "Internal server error" });
   }
 };
