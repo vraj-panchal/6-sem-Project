@@ -108,6 +108,10 @@ export const getSingleBatchDetails = async (req, res) => {
       .select({
         batchId: productBatchesTable.id,
         productId: productBatchesTable.productId,
+        sku: productBatchesTable.sku,
+        unit: productBatchesTable.unit,
+        baseWeight: productBatchesTable.baseWeight,
+        baseUnit: productBatchesTable.baseUnit,
         batchNo: productBatchesTable.batchNo,
         mrp: productBatchesTable.mrp,
         basePrice: productBatchesTable.basePrice,
@@ -116,7 +120,6 @@ export const getSingleBatchDetails = async (req, res) => {
         expiryDate: productBatchesTable.expiryDate,
         isActive: productBatchesTable.isActive,
         productName: productsTable.productName,
-        sku: productsTable.sku,
         imageUrl: productsTable.imageUrl,
       })
       .from(productBatchesTable)
@@ -167,6 +170,10 @@ export const createProductBatch = async (req, res) => {
 
     const {
       productId,
+      sku,
+      unit,
+      baseWeight,
+      baseUnit,
       batchNo,
       mrp,
       basePrice,
@@ -177,14 +184,25 @@ export const createProductBatch = async (req, res) => {
 
     await db.transaction(async (tx) => {
       //  Check product exists
-      const product = await tx
-        .select()
+      const productData = await tx
+        .select({
+          productId: productsTable.id,
+          allowedUnits: categoriesTable.allowedUnits,
+        })
         .from(productsTable)
+        .leftJoin(categoriesTable, eq(productsTable.categoryId, categoriesTable.id))
         .where(eq(productsTable.id, productId))
         .limit(1);
 
-      if (!product.length) {
+      if (!productData.length) {
         throw new Error("Product not found");
+      }
+
+      //  Validate unit against allowedUnits
+      const allowedUnits = productData[0].allowedUnits || [];
+
+      if (baseUnit && !allowedUnits.includes(baseUnit)) {
+        throw new Error(`Base Unit must be one of: ${allowedUnits.join(", ")}`);
       }
 
       //  Check duplicate batch for same product
@@ -208,6 +226,10 @@ export const createProductBatch = async (req, res) => {
         .insert(productBatchesTable)
         .values({
           productId,
+          sku,
+          unit,
+          baseWeight,
+          baseUnit,
           batchNo,
           mrp,
           basePrice,
@@ -258,19 +280,24 @@ export const updateBatch = async (req, res) => {
       });
     }
 
-    const { expiryDate, mrp, basePrice, discount } = result.data;
+    const { sku, unit, baseWeight, baseUnit, batchNo, expiryDate, mrp, basePrice, discount } = result.data;
 
     // Reject empty updates
-    if (expiryDate === undefined && mrp === undefined && basePrice === undefined && discount === undefined) {
+    if (sku === undefined && unit === undefined && baseWeight === undefined && baseUnit === undefined && batchNo === undefined && expiryDate === undefined && mrp === undefined && basePrice === undefined && discount === undefined) {
       return res.status(400).json({
         success: false,
-        message: "No valid fields provided. Please check your spelling (e.g. use 'basePrice' not 'base_price')."
+        message: "No valid fields provided."
       });
     }
 
     const updatedBatch = await db
       .update(productBatchesTable)
       .set({
+        ...(sku !== undefined && { sku }),
+        ...(unit !== undefined && { unit }),
+        ...(baseWeight !== undefined && { baseWeight }),
+        ...(baseUnit !== undefined && { baseUnit }),
+        ...(batchNo !== undefined && { batchNo }),
         ...(expiryDate !== undefined && { expiryDate }),
         ...(mrp !== undefined && { mrp }),
         ...(basePrice !== undefined && { basePrice }),

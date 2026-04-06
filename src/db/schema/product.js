@@ -28,17 +28,6 @@ export const productsTable = pgTable("products", {
 
   brand: varchar("brand", { length: 100 }),
 
-  sku: varchar("sku", { length: 50 })
-    .notNull()
-    .unique(),
-
-  unit: varchar("unit", { length: 10 })
-    .notNull(),
-
-  baseWeight: decimal("base_weight", { precision: 12, scale: 2 }),
-
-  baseUnit: varchar("base_unit", { length: 10 }),
-
   cgst: decimal("cgst", { precision: 5, scale: 2 })
     .default("0"),
 

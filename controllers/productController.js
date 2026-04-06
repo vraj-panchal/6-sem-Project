@@ -18,10 +18,13 @@ export const listProductsWithPricing = async (req, res) => {
     await deactivateExpiredBatches();
 
 
-    // Step 1: Rank batches (nearest expiry per product)
     const rankedBatches = db
       .select({
         productId: productBatchesTable.productId,
+        sku: productBatchesTable.sku,
+        unit: productBatchesTable.unit,
+        baseWeight: productBatchesTable.baseWeight,
+        baseUnit: productBatchesTable.baseUnit,
         batchNo: productBatchesTable.batchNo,
         expiryDate: productBatchesTable.expiryDate,
         stock: productBatchesTable.currentStock,
@@ -30,7 +33,7 @@ export const listProductsWithPricing = async (req, res) => {
         discount: productBatchesTable.discount,
         rowNumber: sql`
           ROW_NUMBER() OVER (
-            PARTITION BY ${productBatchesTable.productId}
+            PARTITION BY ${productBatchesTable.productId}, ${productBatchesTable.sku}
             ORDER BY ${productBatchesTable.expiryDate} ASC
           )
         `.as("rowNumber"),
@@ -72,14 +75,15 @@ export const listProductsWithPricing = async (req, res) => {
       });
     }
 
-    //  Step 3: Fetch paginated products
     const products = await db
       .select({
         id: productsTable.id,
         productName: productsTable.productName,
         imageUrl: productsTable.imageUrl,
-        sku: productsTable.sku,
-        unit: productsTable.unit,
+        sku: rankedBatches.sku,
+        unit: rankedBatches.unit,
+        baseWeight: rankedBatches.baseWeight,
+        baseUnit: rankedBatches.baseUnit,
         categoryName: categoriesTable.categoryName,
         batchNo: rankedBatches.batchNo,
         expiryDate: rankedBatches.expiryDate,
@@ -171,10 +175,6 @@ export const getAdminProductList = async (req, res) => {
         id: productsTable.id,
         productName: productsTable.productName,
         brand: productsTable.brand,
-        sku: productsTable.sku,
-        unit: productsTable.unit,
-        baseWeight: productsTable.baseWeight,
-        baseUnit: productsTable.baseUnit,
         cgst: productsTable.cgst,
         sgst: productsTable.sgst,
         igst: productsTable.igst,
@@ -194,10 +194,6 @@ export const getAdminProductList = async (req, res) => {
         productsTable.id,
         productsTable.productName,
         productsTable.brand,
-        productsTable.sku,
-        productsTable.unit,
-        productsTable.baseWeight,
-        productsTable.baseUnit,
         productsTable.cgst,
         productsTable.sgst,
         productsTable.igst,
@@ -318,10 +314,6 @@ export const addProduct = async (req, res) => {
       categoryId,
       productName,
       brand,
-      sku,
-      unit,
-      baseWeight,
-      baseUnit,
       cgst,
       sgst,
       igst,
@@ -343,29 +335,9 @@ export const addProduct = async (req, res) => {
       });
     }
 
-    //  Validate unit against allowedUnits
-    const allowedUnits = category[0].allowedUnits || [];
+    //  Check duplicate batch for same product (Skipped, now in batch level)
 
-    if (baseUnit && !allowedUnits.includes(baseUnit)) {
-      return res.status(400).json({
-        success: false,
-        message: `Base Unit must be one of: ${allowedUnits.join(", ")}`,
-      });
-    }
-
-    //  Check duplicate SKU
-    const existingSku = await db
-      .select()
-      .from(productsTable)
-      .where(eq(productsTable.sku, sku))
-      .limit(1);
-
-    if (existingSku.length) {
-      return res.status(400).json({
-        success: false,
-        message: "Product with this SKU already exists",
-      });
-    }
+    // Remove SKU duplicate check from product (it's now in batch)
 
     // Insert product
     const newProduct = await db
@@ -375,10 +347,6 @@ export const addProduct = async (req, res) => {
         createdBy: req.admin.id,
         productName,
         brand,
-        sku,
-        unit,
-        baseWeight,
-        baseUnit,
         cgst,
         sgst,
         igst,
@@ -470,25 +438,7 @@ export const updateProduct = async (req, res) => {
       }
     }
 
-    // check duplicate SKU      
-    if (updatedFields.sku) {
-      const existingSku = await db
-        .select()
-        .from(productsTable)
-        .where(
-          and(
-            eq(productsTable.sku, updatedFields.sku),
-            ne(productsTable.id, Number(id))
-          )
-        )
-        .limit(1);
-      if (existingSku.length) {
-        return res.status(400).json({
-          success: false,
-          message: "Product with this SKU already exists",
-        });
-      }
-    }
+    // Remove SKU duplicate check from product (it's now in batch)
 
     // update product
     const updatedProduct = await db
@@ -606,10 +556,6 @@ export const getProductsByCategoryName = async (req, res) => {
           id: productsTable.id,
           productName: productsTable.productName,
           brand: productsTable.brand,
-          sku: productsTable.sku,
-          unit: productsTable.unit,
-          baseWeight: productsTable.baseWeight,
-          baseUnit: productsTable.baseUnit,
           cgst: productsTable.cgst,
           sgst: productsTable.sgst,
           igst: productsTable.igst,
@@ -630,10 +576,6 @@ export const getProductsByCategoryName = async (req, res) => {
           productsTable.id,
           productsTable.productName,
           productsTable.brand,
-          productsTable.sku,
-          productsTable.unit,
-          productsTable.baseWeight,
-          productsTable.baseUnit,
           productsTable.cgst,
           productsTable.sgst,
           productsTable.igst,
@@ -665,10 +607,13 @@ export const getProductsByCategoryName = async (req, res) => {
 
     // ---------------- USER VIEW ----------------
 
-    // Step 1: Rank batches
     const rankedBatches = db
       .select({
         productId: productBatchesTable.productId,
+        sku: productBatchesTable.sku,
+        unit: productBatchesTable.unit,
+        baseWeight: productBatchesTable.baseWeight,
+        baseUnit: productBatchesTable.baseUnit,
         batchNo: productBatchesTable.batchNo,
         expiryDate: productBatchesTable.expiryDate,
         stock: productBatchesTable.currentStock,
@@ -715,14 +660,15 @@ export const getProductsByCategoryName = async (req, res) => {
       });
     }
 
-    // Fetch paginated products
     const products = await db
       .select({
         id: productsTable.id,
         productName: productsTable.productName,
         imageUrl: productsTable.imageUrl,
-        sku: productsTable.sku,
-        unit: productsTable.unit,
+        sku: rankedBatches.sku,
+        unit: rankedBatches.unit,
+        baseWeight: rankedBatches.baseWeight,
+        baseUnit: rankedBatches.baseUnit,
         batchNo: rankedBatches.batchNo,
         expiryDate: rankedBatches.expiryDate,
         stock: rankedBatches.stock,
@@ -779,16 +725,29 @@ export const getProductDetailsBySku = async (req, res) => {
 
     const productArr = await db
       .select({
-        ...productsTable, // Select all product fields
+        id: productsTable.id,
+        productName: productsTable.productName,
+        brand: productsTable.brand,
+        description: productsTable.description,
+        imageUrl: productsTable.imageUrl,
+        categoryId: productsTable.categoryId,
+        cgst: productsTable.cgst,
+        sgst: productsTable.sgst,
+        igst: productsTable.igst,
         categoryName: categoriesTable.categoryName,
+        sku: productBatchesTable.sku,
+        unit: productBatchesTable.unit,
+        baseWeight: productBatchesTable.baseWeight,
+        baseUnit: productBatchesTable.baseUnit,
       })
-      .from(productsTable)
+      .from(productBatchesTable)
+      .leftJoin(productsTable, eq(productBatchesTable.productId, productsTable.id))
       .leftJoin(categoriesTable, eq(productsTable.categoryId, categoriesTable.id))
-      .where(and(eq(productsTable.sku, sku), eq(productsTable.isActive, true)))
+      .where(and(eq(productBatchesTable.sku, sku), eq(productsTable.isActive, true), eq(productBatchesTable.isActive, true)))
       .limit(1);
 
     if (productArr.length === 0) {
-      return res.status(404).json({ success: false, message: "Product not found or currently inactive" });
+      return res.status(404).json({ success: false, message: "Product size (SKU) not found or currently inactive" });
     }
 
     const currProduct = productArr[0];
@@ -844,12 +803,10 @@ export const getProductDetailsBySku = async (req, res) => {
       };
     }
 
-    // Fetch 4 Similar Products from the same category (excluding current)
     const similarProducts = await db
       .select({
         id: productsTable.id,
         productName: productsTable.productName,
-        sku: productsTable.sku,
         imageUrl: productsTable.imageUrl,
         brand: productsTable.brand,
       })

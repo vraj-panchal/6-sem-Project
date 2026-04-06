@@ -21,6 +21,16 @@ export const productBatchesTable = pgTable(
       .notNull()
       .references(() => productsTable.id, { onDelete: "cascade" }),
 
+    sku: varchar("sku", { length: 50 })
+      .notNull(),
+
+    unit: varchar("unit", { length: 50 })
+      .notNull(),
+
+    baseWeight: decimal("base_weight", { precision: 12, scale: 2 }),
+
+    baseUnit: varchar("base_unit", { length: 10 }),
+
     batchNo: varchar("batch_no", { length: 100 })
       .notNull(),
 

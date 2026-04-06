@@ -24,6 +24,14 @@ const parseIndianDate = (val) => {
 export const createProductBatchSchema = z.object({
   productId: z.coerce.number().int().positive(),
 
+  sku: z.string().min(1).max(50),
+
+  unit: z.string().min(1).max(50),
+
+  baseWeight: z.coerce.number().positive().optional(),
+
+  baseUnit: z.string().max(10).optional(),
+
   batchNo: z.string().min(1).max(100),
 
   mrp: z.coerce.number().positive(),
@@ -49,6 +57,11 @@ export const createProductBatchSchema = z.object({
 
 export const updateProductBatchSchema = z
   .object({
+    sku: z.string().min(1).max(50).optional(),
+    unit: z.string().min(1).max(50).optional(),
+    baseWeight: z.coerce.number().positive().optional(),
+    baseUnit: z.string().max(10).optional(),
+    batchNo: z.string().min(1).max(100).optional(),
     mrp: z.coerce.number().positive().optional(),
     basePrice: z.coerce.number().positive().optional(),
     discount: z.coerce.number().min(0).optional(),

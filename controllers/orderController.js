@@ -149,8 +149,15 @@ export const checkoutCOD = async (req, res) => {
         })
         .where(eq(userTable.id, userId));
     });
+    
+    // Fetch the order number for the response (it was just created in the tx)
+    const orders = await db.select({ n: ordersTable.orderNumber }).from(ordersTable).where(eq(ordersTable.userId, userId)).orderBy(desc(ordersTable.createdAt)).limit(1);
 
-    return res.status(200).json({ success: true, message: "Order placed successfully! (Cash On Delivery)" });
+    return res.status(200).json({ 
+      success: true, 
+      message: "Order placed successfully! (Cash On Delivery)",
+      orderNumber: orders[0]?.n
+    });
 
   } catch (error) {
     console.error("Checkout Error:", error);

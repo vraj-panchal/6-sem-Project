@@ -16,26 +16,6 @@ export const createProductSchema = z.object({
     .max(100, "Brand must be at most 100 characters")
     .optional(),
 
-  sku: z
-    .string()
-    .min(1, "SKU is required")
-    .max(50, "SKU must be at most 50 characters"),
-
-  unit: z
-    .string()
-    .min(1, "Unit is required")
-    .max(10, "Unit must be at most 10 characters"),
-
-  baseWeight: z.coerce
-    .number()
-    .positive("Base weight must be greater than 0")
-    .optional(),
-
-  baseUnit: z
-    .string()
-    .max(10, "Base unit must be at most 10 characters")
-    .optional(),
-
   cgst: z.coerce
     .number()
     .min(0, "CGST cannot be negative")
