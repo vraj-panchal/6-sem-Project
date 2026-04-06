@@ -7,18 +7,30 @@ dotenv.config();
 
 const isProduction = process.env.NODE_ENV === "production";
 
+//  More robust connection logic for Cloud Databases (Render, Vercel, Supabase, etc.)
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  // Modern cloud DBs often require SSL. 
-  // This logic ensures it's handled correctly for production/local.
-  ssl: isProduction
-    ? { rejectUnauthorized: false }
-    : (process.env.DATABASE_URL.includes("localhost") ? false : { rejectUnauthorized: false }),
+  ssl: {
+    rejectUnauthorized: false,
+  },
+  connectionTimeoutMillis: 10000, // Wait 10 seconds before failing
+  idleTimeoutMillis: 30000, 
+  max: 20, 
 });
 
-// Testing the connection
+//  Testing the connection
 pool.connect()
-  .then(() => console.log("✅ Database Connected"))
-  .catch((err) => console.error("❌ DB Connection Error:", err.message));
+  .then(() => console.log("✅ Database Connected (Render/Cloud)"))
+  .catch((err) => {
+    console.error("❌ DB Connection Error Details:");
+    console.error(" - Message:", err.message);
+    console.error(" - Code:", err.code);
+    console.error(" - Check if DATABASE_URL is correct and SSL is enabled.");
+  });
+
+// Handle pool errors to prevent application crash
+pool.on('error', (err) => {
+  console.error('⚠️ Unexpected error on idle client:', err.message);
+});
 
 export const db = drizzle(pool);
