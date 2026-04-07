@@ -390,7 +390,7 @@ export const placeDirectOrder = async (req, res) => {
 
   } catch (error) {
     console.error("Direct Order Error:", error);
-    return res.status(500).json({ success: false, message: "Internal server error" });
+    return res.status(500).json({ success: false, message: error.message || "Internal server error" });
   }
 };
 
