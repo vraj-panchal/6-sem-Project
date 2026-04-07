@@ -7,6 +7,7 @@ import { productsTable } from "../src/db/schema/product.js";
 import { userTable } from "../src/db/schema/users.js";
 import { orderAssignmentsTable } from "../src/db/schema/orderAssignments.js";
 import { rolesTable } from "../src/db/schema/roles.js";
+import { productTransactionsTable } from "../src/db/schema/productTransactions.js";
 import { sendOrderInvoiceEmail } from "../utils/mailer.js";
 
 // HELPER: Generate a custom Order Number (e.g., ORD-240405-X9B)
@@ -138,11 +139,26 @@ export const checkoutCOD = async (req, res) => {
           totalItemPrice: item.totalItemPrice,
         });
 
-        // Deduct stock from batch
+        const prevStock = Number(item.batchStock);
+        const qty = Number(item.quantity);
+        const newStock = prevStock - qty;
+
+        // 1. Insert Transaction Record for "Sale"
+        await tx.insert(productTransactionsTable).values({
+          batchId: item.batchId,
+          transactionType: "sale",
+          quantity: qty,
+          previousStock: prevStock,
+          newStock: newStock,
+          performedBy: userId,
+          remarks: `Order ${newOrder[0].orderNumber}`,
+        });
+
+        // 2. Deduct stock from batch
         await tx
           .update(productBatchesTable)
-          .set({ currentStock: sql`${productBatchesTable.currentStock} - ${item.quantity}` })
-      .where(eq(productBatchesTable.id, item.batchId));
+          .set({ currentStock: String(newStock) })
+          .where(eq(productBatchesTable.id, item.batchId));
       }
 
       // Clear User Cart
@@ -314,7 +330,7 @@ export const placeDirectOrder = async (req, res) => {
       const newOrder = await tx.insert(ordersTable).values({
         userId,
         orderNumber: generateOrderNumber(),
-        subtotal: String(subtotal),
+        subtotal: String(preTaxSubtotal),
         totalTax: String(totalTax),
         finalAmount: String(finalAmount),
         deliveryAddress: fullDeliveryAddress,
@@ -325,20 +341,35 @@ export const placeDirectOrder = async (req, res) => {
       createdOrder = newOrder[0];
       newOrderId = createdOrder.id;
 
-      // Insert Order Item
+      const qty = Number(quantity);
+      const prevStock = Number(itemData.currentStock);
+      const newStock = prevStock - qty;
+
+      // 1. Insert Order Item
       await tx.insert(orderItemsTable).values({
         orderId: newOrderId,
         batchId: itemData.batchId,
         productName: itemData.productName,
         pricePerUnit: String(pricePerUnit),
-        quantity: String(quantity),
+        quantity: String(qty),
         totalItemPrice: String(totalItemPrice),
       });
 
-      // Deduct stock from the batch
+      // 2. Record Transaction History
+      await tx.insert(productTransactionsTable).values({
+        batchId: itemData.batchId,
+        transactionType: "sale",
+        quantity: qty,
+        previousStock: prevStock,
+        newStock: newStock,
+        performedBy: userId,
+        remarks: `Direct Order ${createdOrder.orderNumber}`,
+      });
+
+      // 3. Deduct stock from the batch
       await tx
         .update(productBatchesTable)
-        .set({ currentStock: sql`${productBatchesTable.currentStock} - ${quantity}` })
+        .set({ currentStock: String(newStock) })
         .where(eq(productBatchesTable.id, itemData.batchId));
 
       // Auto-save delivery info to user profile for next time
@@ -385,7 +416,7 @@ export const placeDirectOrder = async (req, res) => {
         quantity: Number(quantity),
         unit: itemData.unit,
         pricePerUnit: pricePerUnit.toFixed(2),
-        subtotal: subtotal.toFixed(2),
+        subtotal: preTaxSubtotal.toFixed(2),
         totalTax: totalTax.toFixed(2),
         finalAmount: finalAmount.toFixed(2),
         status: "pending",
