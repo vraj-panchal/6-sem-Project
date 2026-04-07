@@ -460,8 +460,8 @@ export const getAssignedOrders = async (req, res) => {
   try {
     const employeeId = req.employee.id;
 
-    // Fetch active assignments for this employee
-    const assignments = await db
+    // 1. Fetch all relevant assignments
+    const allAssignments = await db
       .select({
         assignmentId: orderAssignmentsTable.id,
         assignmentStatus: orderAssignmentsTable.status,
@@ -475,13 +475,24 @@ export const getAssignedOrders = async (req, res) => {
       .innerJoin(ordersTable, eq(orderAssignmentsTable.orderId, ordersTable.id))
       .where(and(
         eq(orderAssignmentsTable.employeeId, employeeId),
-        or(eq(orderAssignmentsTable.status, "assigned"), eq(orderAssignmentsTable.status, "accepted"), eq(orderAssignmentsTable.status, "in_progress"))
+        or(
+          eq(orderAssignmentsTable.status, "assigned"), 
+          eq(orderAssignmentsTable.status, "accepted"), 
+          eq(orderAssignmentsTable.status, "in_progress")
+        )
       ))
       .orderBy(desc(orderAssignmentsTable.assignedAt));
 
+    // 2. Split into Notifications vs Active Tasks
+    const notifications = allAssignments.filter(a => a.assignmentStatus === "assigned");
+    const activeTasks = allAssignments.filter(a => a.assignmentStatus === "accepted" || a.assignmentStatus === "in_progress");
+
     return res.status(200).json({
       success: true,
-      data: assignments,
+      data: {
+        notifications,
+        activeTasks
+      }
     });
   } catch (err) {
     console.error("Get Assigned Orders Error:", err);
