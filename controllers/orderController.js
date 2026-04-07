@@ -1,4 +1,4 @@
-import { eq, and, gt, sql, desc, ne } from "drizzle-orm";
+import { eq, and, gt, sql, desc, ne, alias } from "drizzle-orm";
 import { db } from "../config/db.js";
 import { cartTable, cartItemsTable } from "../src/db/schema/cart.js";
 import { ordersTable, orderItemsTable } from "../src/db/schema/orders.js";
@@ -506,6 +506,7 @@ export const getMyOrders = async (req, res) => {
 // GET ALL ORDERS (ADMIN)
 export const getAllOrdersForAdmin = async (req, res) => {
   try {
+    const employees = alias(userTable, "employees");
     const orders = await db
       .select({
         orderId: ordersTable.id,
@@ -520,9 +521,13 @@ export const getAllOrdersForAdmin = async (req, res) => {
         customerName: userTable.username,
         customerEmail: userTable.email,
         customerPhone: userTable.phonenumber,
+        assignmentStatus: orderAssignmentsTable.status,
+        assignedEmployeeName: employees.username,
       })
       .from(ordersTable)
       .leftJoin(userTable, eq(ordersTable.userId, userTable.id))
+      .leftJoin(orderAssignmentsTable, eq(ordersTable.id, orderAssignmentsTable.orderId))
+      .leftJoin(employees, eq(orderAssignmentsTable.employeeId, employees.id))
       .orderBy(desc(ordersTable.createdAt));
 
     // Get items for each order
