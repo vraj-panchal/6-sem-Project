@@ -52,6 +52,7 @@ router.get("/public/:username", getUserProfileByUsername);
 // Product Routes
 router.get("/products", listProductsWithPricing);
 router.get("/product/:sku", getProductDetailsBySku);
+router.get("/products/sku/:sku", getProductDetailsBySku); // Added to match Postman request
 router.get("/categories/:categoryname", getProductsByCategoryName);
 
 // Cart Routes
