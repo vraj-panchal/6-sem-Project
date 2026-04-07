@@ -77,6 +77,7 @@ export const checkoutCOD = async (req, res) => {
     // 3. Calculate Prices & Validate Stock
     let subtotal = 0;
     let totalTax = 0;
+    let totalMRP = 0;
     const orderItemsToInsert = [];
 
     for (const item of cartItems) {
@@ -91,6 +92,7 @@ export const checkoutCOD = async (req, res) => {
 
       subtotal += totalItemPrice;
       totalTax += itemTax;
+      totalMRP += Number(item.basePrice) * Number(item.quantity);
 
       orderItemsToInsert.push({
         batchId: item.batchId,
@@ -98,6 +100,8 @@ export const checkoutCOD = async (req, res) => {
         pricePerUnit: String(pricePerUnit),
         quantity: String(item.quantity),
         totalItemPrice: String(totalItemPrice),
+        mrp: String(item.basePrice),
+        discount: String(item.discount),
       });
     }
 
@@ -159,6 +163,8 @@ export const checkoutCOD = async (req, res) => {
       subtotal: subtotal,
       totalTax: totalTax,
       finalAmount: finalAmount,
+      totalMRP: totalMRP,
+      totalDiscount: totalMRP - subtotal,
       deliveryAddress: fullDeliveryAddress,
       paymentType: "COD",
       items: orderItemsToInsert
@@ -347,12 +353,16 @@ export const placeDirectOrder = async (req, res) => {
       subtotal: subtotal,
       totalTax: totalTax,
       finalAmount: finalAmount,
+      totalMRP: Number(itemData.basePrice) * Number(quantity),
+      totalDiscount: Number(itemData.discount) * Number(quantity),
       deliveryAddress: fullDeliveryAddress,
       paymentType: "COD",
       items: [{
         productName: itemData.productName,
         quantity: quantity,
         pricePerUnit: pricePerUnit,
+        mrp: itemData.basePrice,
+        discount: itemData.discount,
         totalItemPrice: totalItemPrice
       }]
     };
