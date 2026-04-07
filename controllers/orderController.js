@@ -89,7 +89,9 @@ export const checkoutCOD = async (req, res) => {
       const pricePerUnit = Number(item.basePrice) - Number(item.discount);
       const totalItemPrice = pricePerUnit * Number(item.quantity);
       const taxPercentage = Number(item.cgst) + Number(item.sgst) + Number(item.igst);
-      const itemTax = totalItemPrice * (taxPercentage / 100);
+
+      // Tax Extraction from Inclusive Price
+      const itemTax = totalItemPrice * (taxPercentage / (100 + taxPercentage));
 
       subtotal += totalItemPrice;
       totalTax += itemTax;
@@ -106,7 +108,8 @@ export const checkoutCOD = async (req, res) => {
       });
     }
 
-    const finalAmount = subtotal + totalTax;
+    const finalAmount = subtotal;
+    const preTaxSubtotal = finalAmount - totalTax;
 
     // 4. Create Order, Deduct Stock & Clear Cart (all in a DB transaction)
     await db.transaction(async (tx) => {
@@ -114,7 +117,7 @@ export const checkoutCOD = async (req, res) => {
       const newOrder = await tx.insert(ordersTable).values({
         userId,
         orderNumber: generateOrderNumber(),
-        subtotal: String(subtotal),
+        subtotal: String(preTaxSubtotal),
         totalTax: String(totalTax),
         finalAmount: String(finalAmount),
         deliveryAddress: fullDeliveryAddress,
@@ -161,11 +164,11 @@ export const checkoutCOD = async (req, res) => {
     const dbOrder = await db.select().from(ordersTable).where(eq(ordersTable.userId, userId)).orderBy(desc(ordersTable.createdAt)).limit(1);
     const invoiceData = {
       orderNumber: dbOrder[0].orderNumber,
-      subtotal: subtotal,
+      subtotal: preTaxSubtotal,
       totalTax: totalTax,
       finalAmount: finalAmount,
       totalMRP: totalMRP,
-      totalDiscount: totalMRP - subtotal,
+      totalDiscount: totalMRP - finalAmount,
       deliveryAddress: fullDeliveryAddress,
       paymentType: "COD",
       items: orderItemsToInsert
@@ -294,11 +297,12 @@ export const placeDirectOrder = async (req, res) => {
     const pricePerUnit = Number(itemData.basePrice) - Number(itemData.discount);
     const totalItemPrice = pricePerUnit * Number(quantity);
     const taxPercentage = Number(itemData.cgst) + Number(itemData.sgst) + Number(itemData.igst);
-    const itemTax = totalItemPrice * (taxPercentage / 100);
-
-    const subtotal = totalItemPrice;
+      
+    // Tax Extraction from Inclusive Price
+    const itemTax = totalItemPrice * (taxPercentage / (100 + taxPercentage));
     const totalTax = itemTax;
-    const finalAmount = subtotal + totalTax;
+    const finalAmount = totalItemPrice; 
+    const preTaxSubtotal = finalAmount - totalTax;
 
     // Full delivery address string for the order record
     const fullDeliveryAddress = `${deliveryName} | ${deliveryPhone} | ${deliveryAddress}, ${deliveryCity} - ${deliveryPincode}`;
@@ -352,7 +356,7 @@ export const placeDirectOrder = async (req, res) => {
     // Send Invoice Email
     const invoiceData = {
       orderNumber: createdOrder.orderNumber,
-      subtotal: subtotal,
+      subtotal: preTaxSubtotal,
       totalTax: totalTax,
       finalAmount: finalAmount,
       totalMRP: Number(itemData.mrp) * Number(quantity),

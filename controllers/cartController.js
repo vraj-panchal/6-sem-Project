@@ -49,17 +49,18 @@ export const getCartData = async (userId) => {
         const basePrice = Number(item.basePrice) || 0;
         const discount = Number(item.discount) || 0;
         
-        const sellingPriceBeforeTax = basePrice - discount;
+        const sellingPriceWithTax = basePrice - discount;
         const cgst = Number(item.cgst) || 0;
         const sgst = Number(item.sgst) || 0;
         const igst = Number(item.igst) || 0;
         const totalTaxPercent = cgst + sgst + igst;
         
-        const sellingPriceWithTax = sellingPriceBeforeTax + (sellingPriceBeforeTax * totalTaxPercent / 100);
-        
-        const itemTotalMrp = mrp * qty;
+        // Extract tax from inclusive price
+        // Formula: TaxAmount = TotalPrice * (TaxRate / (100 + TaxRate))
         const itemTotalPayable = sellingPriceWithTax * qty;
-        const itemTotalDiscount = itemTotalMrp - (sellingPriceBeforeTax * qty);
+        const itemTax = itemTotalPayable * (totalTaxPercent / (100 + totalTaxPercent));
+        const itemTotalMrp = mrp * qty;
+        const itemTotalDiscount = itemTotalMrp - itemTotalPayable;
 
         totalMrp += itemTotalMrp;
         totalPayable += itemTotalPayable;

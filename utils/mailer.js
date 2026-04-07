@@ -458,16 +458,27 @@ Content-Type: text/html; charset=utf-8
         <div style="display: flex; justify-content: space-between; padding: 6px 0; font-size: 14px;">
           <span style="color: #6b7280;">SGST (9%)</span>
           <span style="font-weight: 600; color: #111827;">₹${sgst.toFixed(2)}</span>
-        </div>
-        <div style="display: flex; justify-content: space-between; padding: 6px 0; font-size: 14px; color: #166534; font-weight: 600;">
-          <span>You Saved (${discountPercentage}%)</span>
-          <span>-₹${Number(orderData.totalDiscount).toFixed(2)}</span>
-        </div>
-        <div style="display: flex; justify-content: space-between; padding: 15px 0; margin-top: 15px; border-top: 2px dashed #e5e7eb;">
-          <span style="font-weight: 800; color: #166534; font-size: 20px;">Total</span>
-          <span style="font-weight: 800; color: #166534; font-size: 20px;">₹${Number(orderData.finalAmount).toFixed(2)}</span>
-        </div>
-      </div>
+        <tr>
+          <td colspan="3" style="padding: 6px 0; color: #6b7280; font-size: 14px;">Total MRP</td>
+          <td style="padding: 6px 0; text-align: right; font-weight: 600; color: #111827;">₹${Number(orderData.totalMRP).toFixed(2)}</td>
+        </tr>
+        <tr>
+          <td colspan="3" style="padding: 6px 0; color: #dc2626; font-size: 14px; font-weight: 600;">Total Discount (-${discountPercentage}%)</td>
+          <td style="padding: 6px 0; text-align: right; font-weight: 700; color: #dc2626;">-₹${Number(orderData.totalDiscount).toFixed(2)}</td>
+        </tr>
+        <tr style="background: #fcfdfd;">
+          <td colspan="3" style="padding: 15px; text-align: right; color: #64748b; font-size: 14px;">Subtotal (Before Tax)</td>
+          <td style="padding: 15px; text-align: right; color: #1e293b; font-weight: 600;">₹${Number(orderData.subtotal).toFixed(2)}</td>
+        </tr>
+        <tr style="background: #fcfdfd;">
+          <td colspan="3" style="padding: 15px; text-align: right; color: #64748b; font-size: 14px;">Total Tax (GST Included)</td>
+          <td style="padding: 15px; text-align: right; color: #1e293b; font-weight: 600;">₹${Number(orderData.totalTax).toFixed(2)}</td>
+        </tr>
+        <tr style="background: #f8fafc;">
+          <td colspan="3" style="padding: 15px; text-align: right; color: #1e5128; font-weight: 800; font-size: 18px;">Total Payable (Incl. Tax)</td>
+          <td style="padding: 15px; text-align: right; color: #1e5128; font-weight: 800; font-size: 24px;">₹${Number(orderData.finalAmount).toFixed(2)}</td>
+        </tr>
+      </table>
 
       <!-- Shipping -->
       <div style="margin-top: 40px; padding: 25px; background-color: #fdfdfd; border: 1px solid #e5e7eb; border-radius: 12px;">
