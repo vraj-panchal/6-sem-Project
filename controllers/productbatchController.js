@@ -4,6 +4,7 @@ import { db } from "../config/db.js";
 import { productsTable } from "../src/db/schema/product.js";
 import { productBatchesTable } from "../src/db/schema/productBatches.js";
 import { productTransactionsTable } from "../src/db/schema/productTransactions.js";
+import { categoriesTable } from "../src/db/schema/categories.js";
 import { adjustStockSchema } from "../validations/adjuststockValidator.js";
 import { updateProductBatchSchema, createProductBatchSchema } from "../validations/productbatchValidator.js";
 
