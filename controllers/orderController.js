@@ -8,6 +8,7 @@ import { userTable } from "../src/db/schema/users.js";
 import { orderAssignmentsTable } from "../src/db/schema/orderAssignments.js";
 import { rolesTable } from "../src/db/schema/roles.js";
 import { productTransactionsTable } from "../src/db/schema/productTransactions.js";
+import { orderTrackingTable } from "../src/db/schema/orderTracking.js";
 import { sendOrderInvoiceEmail } from "../utils/mailer.js";
 
 // HELPER: Generate a custom Order Number (e.g., ORD-240405-X9B)
@@ -16,6 +17,15 @@ const generateOrderNumber = () => {
   const datePart = today.toISOString().slice(2, 4) + (today.getMonth() + 1).toString().padStart(2, "0") + today.getDate().toString().padStart(2, "0");
   const randomPart = Math.random().toString(36).substring(2, 7).toUpperCase();
   return `ORD-${datePart}-${randomPart}`;
+};
+
+// HELPER: Add Tracking Event
+const addOrderTrackingEvent = async (tx, orderId, status, message) => {
+  await tx.insert(orderTrackingTable).values({
+    orderId,
+    status,
+    message,
+  });
 };
 
 // CHECKOUT FROM CART (COD)
@@ -127,6 +137,9 @@ export const checkoutCOD = async (req, res) => {
       }).returning();
 
       const orderId = newOrder[0].id;
+
+      // 1. Log Tracking milestone: "Order Placed"
+      await addOrderTrackingEvent(tx, orderId, "pending", "Order placed successfully! Waiting for approval.");
 
       // Insert All Order Items & Deduct Stock
       for (const item of orderItemsToInsert) {
@@ -340,6 +353,9 @@ export const placeDirectOrder = async (req, res) => {
 
       createdOrder = newOrder[0];
       newOrderId = createdOrder.id;
+
+      // 1. Log Tracking milestone: "Order Placed"
+      await addOrderTrackingEvent(tx, newOrderId, "pending", "Direct order placed successfully! Waiting for approval.");
 
       const qty = Number(quantity);
       const prevStock = Number(itemData.currentStock);
@@ -561,6 +577,21 @@ export const updateOrderStatus = async (req, res) => {
       return res.status(404).json({ success: false, message: "Order not found" });
     }
 
+    // 1. Log Tracking milestone for status update
+    const statusMessages = {
+      approved: "Your order has been approved and is being processed.",
+      packed: "Your order has been packed and is ready for shipment.",
+      shipped: "Your order has been shipped and is on its way!",
+      delivered: "Your order has been delivered. Enjoy!",
+      cancelled: "Your order has been cancelled.",
+      returned: "Your order has been returned."
+    };
+    await db.insert(orderTrackingTable).values({
+      orderId: Number(id),
+      status: status,
+      message: statusMessages[status] || `Order status updated to ${status}.`
+    });
+
     return res.status(200).json({
       success: true,
       message: `Order status updated to ${status}`,
@@ -633,6 +664,9 @@ export const assignOrderToEmployee = async (req, res) => {
         })
         .returning();
 
+      // Log Tracking Milestone: "Assigned to Employee"
+      await addOrderTrackingEvent(tx, Number(id), "approved", `Order assigned to our delivery partner for processing.`);
+
       return { order: updatedOrder[0], assignment: newAssignment[0] };
     });
 
@@ -647,5 +681,44 @@ export const assignOrderToEmployee = async (req, res) => {
     }
     console.error("Assign Order Error:", error);
     return res.status(500).json({ success: false, message: error.message || "Internal server error" });
+  }
+};
+
+// GET TRACKING TIMELINE (CUSTOMER)
+export const trackOrder = async (req, res) => {
+  try {
+    const { orderNumber } = req.params;
+
+    // 1. Find the order first
+    const orderRecord = await db
+      .select({ id: ordersTable.id, status: ordersTable.status, orderNumber: ordersTable.orderNumber })
+      .from(ordersTable)
+      .where(eq(ordersTable.orderNumber, orderNumber))
+      .limit(1);
+
+    if (!orderRecord.length) {
+      return res.status(404).json({ success: false, message: "Order not found" });
+    }
+
+    const orderId = orderRecord[0].id;
+
+    // 2. Fetch tracking events timeline
+    const trackingEvents = await db
+      .select()
+      .from(orderTrackingTable)
+      .where(eq(orderTrackingTable.orderId, orderId))
+      .orderBy(orderTrackingTable.createdAt);
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        orderNumber: orderRecord[0].orderNumber,
+        currentStatus: orderRecord[0].status,
+        timeline: trackingEvents
+      }
+    });
+  } catch (error) {
+    console.error("Track Order Error:", error);
+    return res.status(500).json({ success: false, message: "Internal server error" });
   }
 };

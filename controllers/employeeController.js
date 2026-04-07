@@ -1,9 +1,12 @@
-import { eq, or, and } from "drizzle-orm";
+import { eq, or, and, desc } from "drizzle-orm";
 import bcrypt from "bcrypt";
 import { db } from "../config/db.js";
 import { userTable } from "../src/db/schema/users.js";
 import { rolesTable } from "../src/db/schema/roles.js";
 import { user_status } from "../src/db/schema/user_status.js";
+import { ordersTable, orderItemsTable } from "../src/db/schema/orders.js";
+import { orderAssignmentsTable } from "../src/db/schema/orderAssignments.js";
+import { orderTrackingTable } from "../src/db/schema/orderTracking.js";
 import {
   employeeRegistrationSchema,
   employeeLoginSchema,
@@ -449,5 +452,111 @@ export const verifyEmployeePasswordResetOTP = async (req, res) => {
     });
   } catch (err) {
     return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// ================= GET ASSIGNED ORDERS (EMPLOYEE TASKS) =================
+export const getAssignedOrders = async (req, res) => {
+  try {
+    const employeeId = req.employee.id;
+
+    // Fetch active assignments for this employee
+    const assignments = await db
+      .select({
+        assignmentId: orderAssignmentsTable.id,
+        assignmentStatus: orderAssignmentsTable.status,
+        assignedAt: orderAssignmentsTable.assignedAt,
+        orderId: ordersTable.id,
+        orderNumber: ordersTable.orderNumber,
+        finalAmount: ordersTable.finalAmount,
+        deliveryAddress: ordersTable.deliveryAddress,
+      })
+      .from(orderAssignmentsTable)
+      .innerJoin(ordersTable, eq(orderAssignmentsTable.orderId, ordersTable.id))
+      .where(and(
+        eq(orderAssignmentsTable.employeeId, employeeId),
+        or(eq(orderAssignmentsTable.status, "assigned"), eq(orderAssignmentsTable.status, "accepted"), eq(orderAssignmentsTable.status, "in_progress"))
+      ))
+      .orderBy(desc(orderAssignmentsTable.assignedAt));
+
+    return res.status(200).json({
+      success: true,
+      data: assignments,
+    });
+  } catch (err) {
+    console.error("Get Assigned Orders Error:", err);
+    return res.status(500).json({ success: false, message: "Internal server error" });
+  }
+};
+
+// ================= UPDATE ASSIGNMENT STATUS (LOCK PROGRESS) =================
+export const updateAssignmentStatus = async (req, res) => {
+  try {
+    const { id } = req.params; // assignmentId
+    const { status } = req.body;
+    const employeeId = req.employee.id;
+
+    const validStatuses = ["accepted", "in_progress", "completed"];
+    if (!validStatuses.includes(status)) {
+      return res.status(400).json({ success: false, message: "Invalid fulfillment status" });
+    }
+
+    const result = await db.transaction(async (tx) => {
+      // 1. Verify existence and ownership
+      const assignment = await tx
+        .select()
+        .from(orderAssignmentsTable)
+        .where(and(eq(orderAssignmentsTable.id, Number(id)), eq(orderAssignmentsTable.employeeId, employeeId)))
+        .limit(1);
+
+      if (!assignment.length) {
+        throw new Error("Assignment not found or unauthorized");
+      }
+
+      const orderId = assignment[0].orderId;
+
+      // 2. Update assignment status
+      const updatedAssignment = await tx
+        .update(orderAssignmentsTable)
+        .set({ status: status })
+        .where(eq(orderAssignmentsTable.id, Number(id)))
+        .returning();
+
+      // 3. LOG TRACKING MILESTONE
+      let milestoneMessage = "";
+      if (status === "accepted") {
+        milestoneMessage = "Your delivery partner has accepted the order and is preparing for delivery.";
+      } else if (status === "in_progress") {
+        milestoneMessage = `Your order is out for delivery! Our partner is on the way.`;
+      } else if (status === "completed") {
+        milestoneMessage = "Order delivered successfully! Thank you for shopping with us.";
+        
+        // Auto-update main order status to 'delivered'
+        await tx
+          .update(ordersTable)
+          .set({ status: "delivered" })
+          .where(eq(ordersTable.id, orderId));
+      }
+
+      await tx.insert(orderTrackingTable).values({
+        orderId: orderId,
+        status: status === "completed" ? "delivered" : "approved", 
+        message: milestoneMessage
+      });
+
+      return updatedAssignment[0];
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: `Progress updated to ${status}`,
+      data: result
+    });
+  } catch (err) {
+    if (err.message === "Assignment not found or unauthorized") {
+      return res.status(404).json({ success: false, message: err.message });
+    }
+    console.error("Update Assignment Error:", err);
+    return res.status(500).json({ success: false, message: "Internal server error" });
   }
 };

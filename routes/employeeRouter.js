@@ -9,8 +9,8 @@ import {
   verifyEmployeePasswordResetOTP,
   updateProfileImage,
   getEmployeeProfileByUsername,
-  // getEmployeeProfile, // Add these if you want to standardize
-  // getEmployeeDashboard
+  getAssignedOrders,
+  updateAssignmentStatus
 } from "../controllers/employeeController.js";
 
 import { isAdminLoggedIn } from "../middlewares/isAdminLoggedIn.js";
@@ -48,5 +48,9 @@ router.get("/public/:username", getEmployeeProfileByUsername);
 
 // Inventory & Product Access
 router.get("/categories/:categoryname", isEmployeeLoggedIn, getProductsByCategoryName);
+
+// Order Fulfillment
+router.get("/assigned-orders", isEmployeeLoggedIn, getAssignedOrders);
+router.put("/assignment/:id/status", isEmployeeLoggedIn, upload.none(), updateAssignmentStatus);
 
 export default router;

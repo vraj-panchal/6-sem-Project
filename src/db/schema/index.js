@@ -8,6 +8,7 @@ import { productTransactionsTable, transactionTypeEnum } from "./productTransact
 import { cartTable, cartItemsTable } from "./cart.js";
 import { ordersTable, orderItemsTable, orderStatusEnum } from "./orders.js";
 import { orderAssignmentsTable, assignmentStatusEnum } from "./orderAssignments.js";
+import { orderTrackingTable } from "./orderTracking.js";
 
 export { 
     rolesTable, user_status, userTable, 
@@ -15,5 +16,6 @@ export {
     productBatchesTable, productTransactionsTable, transactionTypeEnum,
     cartTable, cartItemsTable,
     ordersTable, orderItemsTable, orderStatusEnum,
-    orderAssignmentsTable, assignmentStatusEnum
+    orderAssignmentsTable, assignmentStatusEnum,
+    orderTrackingTable
 };
