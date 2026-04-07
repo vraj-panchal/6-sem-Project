@@ -246,43 +246,28 @@ export const placeDirectOrder = async (req, res) => {
     }
     const deliveryName = userRecord[0].username;
 
-    // Find product by SKU
-    const product = await db
-      .select()
-      .from(productsTable)
-      .where(eq(productsTable.sku, sku))
-      .limit(1);
-
-    if (!product.length) {
-      return res.status(404).json({ success: false, message: "Product not found" });
-    }
-
-    if (!product[0].isActive) {
-      return res.status(400).json({ success: false, message: "This product is currently unavailable" });
-    }
-
-    // Find the nearest valid batch (not expired, has stock, is active)
-    const batch = await db
-      .select()
+    // 1. Find the specific batch by SKU and its associated product info
+    const batchWithProduct = await db
+      .select({
+        batch: productBatchesTable,
+        product: productsTable,
+      })
       .from(productBatchesTable)
-      .where(
-        and(
-          eq(productBatchesTable.productId, product[0].id),
-          eq(productBatchesTable.isActive, true),
-          gt(productBatchesTable.currentStock, "0"),
-          gt(productBatchesTable.expiryDate, sql`CURRENT_DATE`)
-        )
-      )
-      .orderBy(productBatchesTable.expiryDate) // nearest expiry first
+      .innerJoin(productsTable, eq(productBatchesTable.productId, productsTable.id))
+      .where(and(
+        eq(productBatchesTable.sku, sku),
+        eq(productBatchesTable.isActive, true)
+      ))
       .limit(1);
 
-    if (!batch.length) {
-      return res.status(400).json({ success: false, message: "This product is currently out of stock" });
+    if (!batchWithProduct.length) {
+      return res.status(404).json({ success: false, message: "Product SKU not found or inactive" });
     }
 
-    const selectedBatch = batch[0];
+    const selectedBatch = batchWithProduct[0].batch;
+    const product = batchWithProduct[0].product;
 
-    // Validate requested quantity against available stock
+    // 2. Validate requested quantity against available stock
     if (Number(quantity) > Number(selectedBatch.currentStock)) {
       return res.status(400).json({
         success: false,
@@ -290,10 +275,10 @@ export const placeDirectOrder = async (req, res) => {
       });
     }
 
-    // Calculate pricing
+    // 3. Calculate pricing
     const pricePerUnit = Number(selectedBatch.basePrice) - Number(selectedBatch.discount);
     const totalItemPrice = pricePerUnit * Number(quantity);
-    const taxPercentage = Number(product[0].cgst) + Number(product[0].sgst) + Number(product[0].igst);
+    const taxPercentage = Number(product.cgst) + Number(product.sgst) + Number(product.igst);
     const itemTax = totalItemPrice * (taxPercentage / 100);
 
     const subtotal = totalItemPrice;
@@ -358,7 +343,7 @@ export const placeDirectOrder = async (req, res) => {
       deliveryAddress: fullDeliveryAddress,
       paymentType: "COD",
       items: [{
-        productName: product[0].productName,
+        productName: product.productName,
         quantity: quantity,
         pricePerUnit: pricePerUnit,
         totalItemPrice: totalItemPrice
@@ -373,9 +358,9 @@ export const placeDirectOrder = async (req, res) => {
       data: {
         orderId: newOrderId,
         orderNumber: createdOrder.orderNumber,
-        productName: product[0].productName,
+        productName: product.productName,
         quantity: Number(quantity),
-        unit: product[0].unit,
+        unit: product.unit,
         pricePerUnit: pricePerUnit.toFixed(2),
         subtotal: subtotal.toFixed(2),
         totalTax: totalTax.toFixed(2),
