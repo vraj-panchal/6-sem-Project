@@ -739,6 +739,7 @@ export const getProductDetailsBySku = async (req, res) => {
         unit: productBatchesTable.unit,
         baseWeight: productBatchesTable.baseWeight,
         baseUnit: productBatchesTable.baseUnit,
+        batchDescription: productBatchesTable.description, // Added
       })
       .from(productBatchesTable)
       .leftJoin(productsTable, eq(productBatchesTable.productId, productsTable.id))
@@ -827,7 +828,8 @@ export const getProductDetailsBySku = async (req, res) => {
         productName: currProduct.productName,
         brand: currProduct.brand,
         sku: currProduct.sku,
-        description: currProduct.description,
+        productDescription: currProduct.description, // Renamed for clarity
+        batchDescription: currProduct.batchDescription, // Added
         imageUrl: currProduct.imageUrl,
         categoryName: currProduct.categoryName,
         unit: currProduct.unit,

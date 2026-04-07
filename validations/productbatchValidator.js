@@ -49,6 +49,8 @@ export const createProductBatchSchema = z.object({
       message: "Invalid date format. Please use DD/MM/YYYY or DD-MM-YYYY (Indian Format)",
     })
     .optional(),
+
+  description: z.string().max(1000).optional(),
 })
 .refine((data) => data.basePrice <= data.mrp, {
   message: "Base price cannot be greater than MRP",
@@ -72,6 +74,7 @@ export const updateProductBatchSchema = z
         message: "Invalid date format. Please use DD/MM/YYYY or DD-MM-YYYY (Indian Format)",
       })
       .optional(),
+    description: z.string().max(1000).optional(),
   })
   .refine((data) => {
     if (data.basePrice && data.mrp) {

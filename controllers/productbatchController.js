@@ -119,7 +119,9 @@ export const getSingleBatchDetails = async (req, res) => {
         currentStock: productBatchesTable.currentStock,
         expiryDate: productBatchesTable.expiryDate,
         isActive: productBatchesTable.isActive,
+        batchDescription: productBatchesTable.description, // Added
         productName: productsTable.productName,
+        productDescription: productsTable.description, // Added
         imageUrl: productsTable.imageUrl,
       })
       .from(productBatchesTable)
@@ -180,6 +182,7 @@ export const createProductBatch = async (req, res) => {
       discount,
       currentStock,
       expiryDate,
+      description,
     } = result.data;
 
     await db.transaction(async (tx) => {
@@ -236,6 +239,7 @@ export const createProductBatch = async (req, res) => {
           discount,
           currentStock: currentStock,
           expiryDate: expiryDate || null,
+          description: description || null,
         })
         .returning();
 
@@ -280,10 +284,10 @@ export const updateBatch = async (req, res) => {
       });
     }
 
-    const { sku, unit, baseWeight, baseUnit, batchNo, expiryDate, mrp, basePrice, discount } = result.data;
+  const { sku, unit, baseWeight, baseUnit, batchNo, expiryDate, mrp, basePrice, discount, description } = result.data;
 
     // Reject empty updates
-    if (sku === undefined && unit === undefined && baseWeight === undefined && baseUnit === undefined && batchNo === undefined && expiryDate === undefined && mrp === undefined && basePrice === undefined && discount === undefined) {
+    if (sku === undefined && unit === undefined && baseWeight === undefined && baseUnit === undefined && batchNo === undefined && expiryDate === undefined && mrp === undefined && basePrice === undefined && discount === undefined && description === undefined) {
       return res.status(400).json({
         success: false,
         message: "No valid fields provided."
@@ -302,6 +306,7 @@ export const updateBatch = async (req, res) => {
         ...(mrp !== undefined && { mrp }),
         ...(basePrice !== undefined && { basePrice }),
         ...(discount !== undefined && { discount }),
+        ...(description !== undefined && { description }),
       })
       .where(eq(productBatchesTable.id, Number(id)))
       .returning();

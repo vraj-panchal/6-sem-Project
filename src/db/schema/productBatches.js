@@ -8,6 +8,7 @@ import {
   timestamp,
   date,
   boolean,
+  text,
   uniqueIndex,
 } from "drizzle-orm/pg-core";
 import { productsTable } from "./product.js";
@@ -54,6 +55,8 @@ export const productBatchesTable = pgTable(
 
     isActive: boolean("is_active")
       .default(true),
+
+    description: text("description"),
   },
   (table) => ({
     uniqueBatch: uniqueIndex("unique_product_batch")
