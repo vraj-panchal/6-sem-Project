@@ -246,11 +246,19 @@ export const placeDirectOrder = async (req, res) => {
     }
     const deliveryName = userRecord[0].username;
 
-    // 1. Find the specific batch by SKU and its associated product info
-    const batchWithProduct = await db
+    // 1. Find the specific batch by SKU and its associated product info (Flat Select)
+    const results = await db
       .select({
-        batch: productBatchesTable,
-        product: productsTable,
+        productId: productsTable.id,
+        productName: productsTable.productName,
+        unit: productBatchesTable.unit,
+        cgst: productsTable.cgst,
+        sgst: productsTable.sgst,
+        igst: productsTable.igst,
+        batchId: productBatchesTable.id,
+        basePrice: productBatchesTable.basePrice,
+        discount: productBatchesTable.discount,
+        currentStock: productBatchesTable.currentStock,
       })
       .from(productBatchesTable)
       .innerJoin(productsTable, eq(productBatchesTable.productId, productsTable.id))
@@ -260,25 +268,24 @@ export const placeDirectOrder = async (req, res) => {
       ))
       .limit(1);
 
-    if (!batchWithProduct.length) {
+    if (!results.length) {
       return res.status(404).json({ success: false, message: "Product SKU not found or inactive" });
     }
 
-    const selectedBatch = batchWithProduct[0].batch;
-    const product = batchWithProduct[0].product;
+    const itemData = results[0];
 
     // 2. Validate requested quantity against available stock
-    if (Number(quantity) > Number(selectedBatch.currentStock)) {
+    if (Number(quantity) > Number(itemData.currentStock)) {
       return res.status(400).json({
         success: false,
-        message: `Only ${selectedBatch.currentStock} unit(s) available in stock`,
+        message: `Only ${itemData.currentStock} unit(s) available in stock`,
       });
     }
 
     // 3. Calculate pricing
-    const pricePerUnit = Number(selectedBatch.basePrice) - Number(selectedBatch.discount);
+    const pricePerUnit = Number(itemData.basePrice) - Number(itemData.discount);
     const totalItemPrice = pricePerUnit * Number(quantity);
-    const taxPercentage = Number(product.cgst) + Number(product.sgst) + Number(product.igst);
+    const taxPercentage = Number(itemData.cgst) + Number(itemData.sgst) + Number(itemData.igst);
     const itemTax = totalItemPrice * (taxPercentage / 100);
 
     const subtotal = totalItemPrice;
@@ -309,18 +316,18 @@ export const placeDirectOrder = async (req, res) => {
       // Insert Order Item
       await tx.insert(orderItemsTable).values({
         orderId: newOrderId,
-        batchId: selectedBatch.id,
-        productName: product[0].productName,
+        batchId: itemData.batchId,
+        productName: itemData.productName,
         pricePerUnit: String(pricePerUnit),
         quantity: String(quantity),
-        totalItemPrice: String(finalAmount),
+        totalItemPrice: String(totalItemPrice),
       });
 
       // Deduct stock from the batch
       await tx
         .update(productBatchesTable)
         .set({ currentStock: sql`${productBatchesTable.currentStock} - ${quantity}` })
-        .where(eq(productBatchesTable.id, selectedBatch.id));
+        .where(eq(productBatchesTable.id, itemData.batchId));
 
       // Auto-save delivery info to user profile for next time
       await tx
@@ -343,7 +350,7 @@ export const placeDirectOrder = async (req, res) => {
       deliveryAddress: fullDeliveryAddress,
       paymentType: "COD",
       items: [{
-        productName: product.productName,
+        productName: itemData.productName,
         quantity: quantity,
         pricePerUnit: pricePerUnit,
         totalItemPrice: totalItemPrice
@@ -358,9 +365,9 @@ export const placeDirectOrder = async (req, res) => {
       data: {
         orderId: newOrderId,
         orderNumber: createdOrder.orderNumber,
-        productName: product.productName,
+        productName: itemData.productName,
         quantity: Number(quantity),
-        unit: product.unit,
+        unit: itemData.unit,
         pricePerUnit: pricePerUnit.toFixed(2),
         subtotal: subtotal.toFixed(2),
         totalTax: totalTax.toFixed(2),
