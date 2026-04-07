@@ -1,4 +1,4 @@
-import { eq, and, gt, sql, asc } from "drizzle-orm";
+import { eq, and, gt, sql, asc, or } from "drizzle-orm";
 import { db } from "../config/db.js";
 import { cartTable, cartItemsTable } from "../src/db/schema/cart.js";
 import { productBatchesTable } from "../src/db/schema/productBatches.js";
@@ -59,7 +59,7 @@ export const getCartData = async (userId) => {
         
         const itemTotalMrp = mrp * qty;
         const itemTotalPayable = sellingPriceWithTax * qty;
-        const itemTotalDiscount = itemTotalMrp - itemTotalPayable;
+        const itemTotalDiscount = itemTotalMrp - (sellingPriceBeforeTax * qty);
 
         totalMrp += itemTotalMrp;
         totalPayable += itemTotalPayable;
@@ -116,14 +116,19 @@ export const addToCart = async (req, res) => {
         }
         const cartId = cart[0].id;
 
-        // --- OPTION A: DIRECT BATCH SELECTION (For Variants like Milk size) ---
+        // --- OPTION A: DIRECT BATCH SELECTION ---
         if (batchId) {
+            const isNumericId = !isNaN(Number(batchId)) && typeof batchId !== "string";
+            const batchQueryCondition = isNumericId
+                ? eq(productBatchesTable.id, Number(batchId))
+                : or(eq(productBatchesTable.batchNo, String(batchId)), eq(productBatchesTable.sku, String(batchId)));
+
             const specificBatch = await db
                 .select()
                 .from(productBatchesTable)
                 .where(
                     and(
-                        eq(productBatchesTable.id, Number(batchId)),
+                        batchQueryCondition,
                         eq(productBatchesTable.productId, Number(productId)),
                         eq(productBatchesTable.isActive, true),
                         gt(productBatchesTable.expiryDate, sql`CURRENT_DATE`)
