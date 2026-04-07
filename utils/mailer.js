@@ -340,3 +340,150 @@ Content-Type: text/html; charset=utf-8
     return false;
   }
 };
+
+export const sendOrderInvoiceEmail = async (email, username, orderData) => {
+  // NOTE: Actual Cloudinary Logo URL applied
+  const logoUrl = "https://res.cloudinary.com/dxak3pk4u/image/upload/v1775545588/Green_Fluid_Dome_Logo_qhdt4z.png"; 
+
+  try {
+    const accessToken = await getAccessToken();
+
+    const itemsHtml = orderData.items
+      .map(
+        (item) => `
+        <tr>
+          <td style="padding: 15px; border-bottom: 1px solid #f0f0f0;">
+            <p style="margin: 0; font-weight: 600; color: #1e5128; font-size: 15px;">${item.productName}</p>
+            <span style="color: #6a994e; font-size: 12px; background: #f0fdf4; padding: 2px 8px; border-radius: 4px; border: 1px solid #dcfce7; display: inline-block; margin-top: 4px;">Qty: ${item.quantity}</span>
+          </td>
+          <td style="padding: 15px; border-bottom: 1px solid #f0f0f0; text-align: right; color: #444;">
+            ₹${Number(item.pricePerUnit).toFixed(2)}
+          </td>
+          <td style="padding: 15px; border-bottom: 1px solid #f0f0f0; text-align: right; font-weight: bold; color: #1e5128;">
+            ₹${Number(item.totalItemPrice).toFixed(2)}
+          </td>
+        </tr>
+      `
+      )
+      .join("");
+
+    const cgst = Number(orderData.totalTax) / 2;
+    const sgst = Number(orderData.totalTax) / 2;
+
+    const rawEmail = `From: "Nest Official" <${process.env.EMAIL_USER}>
+To: ${email}
+Subject: Order Confirmed! Invoice for #${orderData.orderNumber}
+MIME-Version: 1.0
+Content-Type: text/html; charset=utf-8
+
+<div style="font-family: 'Inter', system-ui, -apple-system, sans-serif; padding: 20px; background-color: #f3f4f6; color: #1f2937;">
+  <div style="max-width: 650px; margin: 0 auto; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.05); border: 1px solid #e5e7eb;">
+    
+    <!-- Branding Header -->
+    <div style="background: linear-gradient(135deg, #004d2c 0%, #1e5128 100%); padding: 40px 30px; text-align: center; color: white;">
+      <img src="${logoUrl}" alt="NEST" style="max-width: 120px; margin-bottom: 15px; border-radius: 8px;">
+      <h1 style="margin: 0; font-size: 32px; font-weight: 800; letter-spacing: -0.025em;">NEST OFFICIAL</h1>
+      <p style="margin: 8px 0 0; opacity: 0.85; font-size: 16px;">Order Confirmation & Tax Invoice</p>
+    </div>
+
+    <div style="padding: 40px 30px;">
+      <!-- Order Quick Info -->
+      <table style="width: 100%; margin-bottom: 40px;">
+        <tr>
+          <td style="vertical-align: top;">
+            <p style="margin: 0; font-size: 12px; text-transform: uppercase; color: #6b7280; font-weight: 700; letter-spacing: 0.05em;">Order Number</p>
+            <p style="margin: 4px 0 0; font-size: 18px; font-weight: 700; color: #111827;">#${orderData.orderNumber}</p>
+          </td>
+          <td style="vertical-align: top; text-align: right;">
+            <p style="margin: 0; font-size: 12px; text-transform: uppercase; color: #6b7280; font-weight: 700; letter-spacing: 0.05em;">Placed On</p>
+            <p style="margin: 4px 0 0; font-size: 18px; font-weight: 700; color: #111827;">${new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
+          </td>
+        </tr>
+      </table>
+
+      <!-- Items Table -->
+      <table style="width: 100%; border-collapse: separate; border-spacing: 0; margin-bottom: 40px; border: 1px solid #f3f4f6; border-radius: 12px; overflow: hidden;">
+        <thead>
+          <tr style="background-color: #f9fafb;">
+            <th style="padding: 15px; text-align: left; border-bottom: 1px solid #e5e7eb; color: #374151; font-weight: 700;">Items</th>
+            <th style="padding: 15px; text-align: right; border-bottom: 1px solid #e5e7eb; color: #374151; font-weight: 700;">Price</th>
+            <th style="padding: 15px; text-align: right; border-bottom: 1px solid #e5e7eb; color: #374151; font-weight: 700;">Amount</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${itemsHtml}
+        </tbody>
+      </table>
+
+      <!-- Summary & Tax -->
+      <div style="width: 100%; max-width: 300px; margin-left: auto; background: #fafafa; padding: 20px; border-radius: 12px; border: 1px solid #f0f0f0;">
+        <div style="display: flex; justify-content: space-between; padding: 6px 0; font-size: 14px;">
+          <span style="color: #6b7280;">Subtotal</span>
+          <span style="font-weight: 600; color: #111827;">₹${Number(orderData.subtotal).toFixed(2)}</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; padding: 6px 0; font-size: 14px;">
+          <span style="color: #6b7280;">CGST (9%)</span>
+          <span style="font-weight: 600; color: #111827;">₹${cgst.toFixed(2)}</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; padding: 6px 0; font-size: 14px;">
+          <span style="color: #6b7280;">SGST (9%)</span>
+          <span style="font-weight: 600; color: #111827;">₹${sgst.toFixed(2)}</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; padding: 15px 0; margin-top: 15px; border-top: 2px dashed #e5e7eb;">
+          <span style="font-weight: 800; color: #004d2c; font-size: 20px;">Total</span>
+          <span style="font-weight: 800; color: #004d2c; font-size: 20px;">₹${Number(orderData.finalAmount).toFixed(2)}</span>
+        </div>
+      </div>
+
+      <!-- Footer Info -->
+      <div style="margin-top: 40px; padding: 25px; background-color: #fdfdfd; border: 1px solid #e5edff; border-radius: 12px;">
+        <div style="margin-bottom: 20px;">
+          <h4 style="margin: 0 0 8px; color: #1e5128; font-size: 14px; text-transform: uppercase; letter-spacing: 0.05em;">Shipping Address</h4>
+          <p style="margin: 0; font-size: 14px; line-height: 1.6; color: #4b5563;">${orderData.deliveryAddress}</p>
+        </div>
+        <div>
+          <h4 style="margin: 0 0 8px; color: #1e5128; font-size: 14px; text-transform: uppercase; letter-spacing: 0.05em;">Payment Details</h4>
+          <span style="background: #fff7ed; color: #c2410c; padding: 4px 12px; border-radius: 9999px; font-size: 12px; font-weight: 700; border: 1px solid #ffedd5;">${orderData.paymentType}: PENDING ON DELIVERY</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Final Footer -->
+    <div style="background-color: #f9fafb; padding: 30px; text-align: center; border-top: 1px solid #f3f4f6;">
+      <p style="margin: 0; font-size: 14px; color: #4b5563; font-weight: 500;">Questions? We're here to help.</p>
+      <p style="margin: 5px 0 0; font-size: 13px; color: #9ca3af;">Contact us at support@nestofficial.com</p>
+      <div style="margin-top: 20px; border-top: 1px solid #e5e7eb; pt-20px;">
+        <p style="margin: 20px 0 0; font-size: 11px; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.1em;">&copy; ${new Date().getFullYear()} NEST OFFICIAL. PRESERVING NATURE.</p>
+      </div>
+    </div>
+  </div>
+</div>`;
+
+    const encodedEmail = Buffer.from(rawEmail)
+      .toString("base64")
+      .replace(/\+/g, "-")
+      .replace(/\//g, "_")
+      .replace(/=+$/, "");
+
+    const sendResponse = await fetch("https://gmail.googleapis.com/gmail/v1/users/me/messages/send", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ raw: encodedEmail }),
+    });
+
+    const result = await sendResponse.json();
+    if (result.error) {
+      console.error("Gmail HTTP Error (Invoice Mail):", result.error);
+      return false;
+    }
+
+    console.log("Invoice email sent successfully! ID: " + result.id);
+    return true;
+  } catch (error) {
+    console.error("Error sending invoice email via HTTP:", error);
+    return false;
+  }
+};

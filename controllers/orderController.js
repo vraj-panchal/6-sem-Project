@@ -7,6 +7,7 @@ import { productsTable } from "../src/db/schema/product.js";
 import { userTable } from "../src/db/schema/users.js";
 import { orderAssignmentsTable } from "../src/db/schema/orderAssignments.js";
 import { rolesTable } from "../src/db/schema/roles.js";
+import { sendOrderInvoiceEmail } from "../utils/mailer.js";
 
 // HELPER: Generate a custom Order Number (e.g., ORD-240405-X9B)
 const generateOrderNumber = () => {
@@ -29,7 +30,7 @@ export const checkoutCOD = async (req, res) => {
 
     // Auto-fetch username as deliveryName from DB
     const userRecord = await db
-      .select({ username: userTable.username })
+      .select({ username: userTable.username, email: userTable.email })
       .from(userTable)
       .where(eq(userTable.id, userId))
       .limit(1);
@@ -38,6 +39,7 @@ export const checkoutCOD = async (req, res) => {
       return res.status(404).json({ success: false, message: "User not found" });
     }
     const deliveryName = userRecord[0].username;
+    const userEmail = userRecord[0].email;
 
     // Full delivery address string for the order record
     const fullDeliveryAddress = `${deliveryName} | ${deliveryPhone} | ${deliveryAddress}, ${deliveryCity} - ${deliveryPincode}`;
@@ -95,7 +97,7 @@ export const checkoutCOD = async (req, res) => {
         productName: item.productName,
         pricePerUnit: String(pricePerUnit),
         quantity: String(item.quantity),
-        totalItemPrice: String(totalItemPrice + itemTax),
+        totalItemPrice: String(totalItemPrice),
       });
     }
 
@@ -132,7 +134,7 @@ export const checkoutCOD = async (req, res) => {
         await tx
           .update(productBatchesTable)
           .set({ currentStock: sql`${productBatchesTable.currentStock} - ${item.quantity}` })
-          .where(eq(productBatchesTable.id, item.batchId));
+      .where(eq(productBatchesTable.id, item.batchId));
       }
 
       // Clear User Cart
@@ -149,14 +151,25 @@ export const checkoutCOD = async (req, res) => {
         })
         .where(eq(userTable.id, userId));
     });
-    
-    // Fetch the order number for the response (it was just created in the tx)
-    const orders = await db.select({ n: ordersTable.orderNumber }).from(ordersTable).where(eq(ordersTable.userId, userId)).orderBy(desc(ordersTable.createdAt)).limit(1);
+
+    // Send Invoice Email (Async)
+    const dbOrder = await db.select().from(ordersTable).where(eq(ordersTable.userId, userId)).orderBy(desc(ordersTable.createdAt)).limit(1);
+    const invoiceData = {
+      orderNumber: dbOrder[0].orderNumber,
+      subtotal: subtotal,
+      totalTax: totalTax,
+      finalAmount: finalAmount,
+      deliveryAddress: fullDeliveryAddress,
+      paymentType: "COD",
+      items: orderItemsToInsert
+    };
+
+    sendOrderInvoiceEmail(userEmail, deliveryName, invoiceData).catch(err => console.error("Invoice Email Error:", err));
 
     return res.status(200).json({ 
       success: true, 
       message: "Order placed successfully! (Cash On Delivery)",
-      orderNumber: orders[0]?.n
+      orderNumber: dbOrder[0].orderNumber
     });
 
   } catch (error) {
@@ -223,7 +236,7 @@ export const placeDirectOrder = async (req, res) => {
 
     // Auto-fetch username as deliveryName from DB
     const userRecord = await db
-      .select({ username: userTable.username })
+      .select({ username: userTable.username, email: userTable.email })
       .from(userTable)
       .where(eq(userTable.id, userId))
       .limit(1);
@@ -335,6 +348,24 @@ export const placeDirectOrder = async (req, res) => {
         })
         .where(eq(userTable.id, userId));
     });
+
+    // Send Invoice Email
+    const invoiceData = {
+      orderNumber: createdOrder.orderNumber,
+      subtotal: subtotal,
+      totalTax: totalTax,
+      finalAmount: finalAmount,
+      deliveryAddress: fullDeliveryAddress,
+      paymentType: "COD",
+      items: [{
+        productName: product[0].productName,
+        quantity: quantity,
+        pricePerUnit: pricePerUnit,
+        totalItemPrice: totalItemPrice
+      }]
+    };
+
+    sendOrderInvoiceEmail(userRecord[0].email, deliveryName, invoiceData).catch(err => console.error("Invoice Email Error:", err));
 
     return res.status(201).json({
       success: true,
