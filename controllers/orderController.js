@@ -58,6 +58,7 @@ export const checkoutCOD = async (req, res) => {
         quantity: cartItemsTable.quantity,
         batchId: productBatchesTable.id,
         batchStock: productBatchesTable.currentStock,
+        mrp: productBatchesTable.mrp,
         basePrice: productBatchesTable.basePrice,
         discount: productBatchesTable.discount,
         productName: productsTable.productName,
@@ -92,7 +93,7 @@ export const checkoutCOD = async (req, res) => {
 
       subtotal += totalItemPrice;
       totalTax += itemTax;
-      totalMRP += Number(item.basePrice) * Number(item.quantity);
+      totalMRP += Number(item.mrp) * Number(item.quantity);
 
       orderItemsToInsert.push({
         batchId: item.batchId,
@@ -100,7 +101,7 @@ export const checkoutCOD = async (req, res) => {
         pricePerUnit: String(pricePerUnit),
         quantity: String(item.quantity),
         totalItemPrice: String(totalItemPrice),
-        mrp: String(item.basePrice),
+        mrp: String(item.mrp),
         discount: String(item.discount),
       });
     }
@@ -262,6 +263,7 @@ export const placeDirectOrder = async (req, res) => {
         sgst: productsTable.sgst,
         igst: productsTable.igst,
         batchId: productBatchesTable.id,
+        mrp: productBatchesTable.mrp,
         basePrice: productBatchesTable.basePrice,
         discount: productBatchesTable.discount,
         currentStock: productBatchesTable.currentStock,
@@ -353,15 +355,15 @@ export const placeDirectOrder = async (req, res) => {
       subtotal: subtotal,
       totalTax: totalTax,
       finalAmount: finalAmount,
-      totalMRP: Number(itemData.basePrice) * Number(quantity),
-      totalDiscount: Number(itemData.discount) * Number(quantity),
+      totalMRP: Number(itemData.mrp) * Number(quantity),
+      totalDiscount: (Number(itemData.mrp) - pricePerUnit) * Number(quantity),
       deliveryAddress: fullDeliveryAddress,
       paymentType: "COD",
       items: [{
         productName: itemData.productName,
         quantity: quantity,
         pricePerUnit: pricePerUnit,
-        mrp: itemData.basePrice,
+        mrp: itemData.mrp,
         discount: itemData.discount,
         totalItemPrice: totalItemPrice
       }]
