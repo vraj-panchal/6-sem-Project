@@ -140,7 +140,7 @@ export const checkoutCOD = async (req, res) => {
       const orderId = newOrder[0].id;
 
       // 1. Log Tracking milestone: "Order Placed"
-      await addOrderTrackingEvent(tx, orderId, "pending", "Order placed successfully! Waiting for approval.");
+      await addOrderTrackingEvent(tx, orderId, "pending", "Order placed successfully! Awaiting confirmation.");
 
       // Insert All Order Items & Deduct Stock
       for (const item of orderItemsToInsert) {
@@ -356,7 +356,7 @@ export const placeDirectOrder = async (req, res) => {
       newOrderId = createdOrder.id;
 
       // 1. Log Tracking milestone: "Order Placed"
-      await addOrderTrackingEvent(tx, newOrderId, "pending", "Direct order placed successfully! Waiting for approval.");
+      await addOrderTrackingEvent(tx, newOrderId, "pending", "Your order has been placed and is currently awaiting review.");
 
       const qty = Number(quantity);
       const prevStock = Number(itemData.currentStock);
@@ -380,7 +380,7 @@ export const placeDirectOrder = async (req, res) => {
         previousStock: prevStock,
         newStock: newStock,
         performedBy: userId,
-        remarks: `Direct Order ${createdOrder.orderNumber}`,
+        remarks: `Quick Purchase - Order ${createdOrder.orderNumber}`,
       });
 
       // 3. Deduct stock from the batch
