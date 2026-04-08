@@ -119,6 +119,7 @@ export const checkoutCOD = async (req, res) => {
         totalItemPrice: String(totalItemPrice),
         mrp: String(item.mrp),
         discount: String(item.discount),
+        batchStock: item.batchStock, // Added missing stock for transaction history
       });
     }
 
@@ -156,8 +157,8 @@ export const checkoutCOD = async (req, res) => {
           totalItemPrice: item.totalItemPrice,
         });
 
-        const prevStock = Number(item.batchStock);
-        const qty = Number(item.quantity);
+        const prevStock = Number(item.batchStock || 0); // Correctly retrieve from the array
+        const qty = Number(item.quantity || 0);
         const newStock = prevStock - qty;
 
         // 1. Insert Transaction Record for "Sale"
