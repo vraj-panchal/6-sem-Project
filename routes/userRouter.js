@@ -23,6 +23,7 @@ import { isUserLoggedIn } from "../middlewares/isUserLoggedIn.js";
 import { userImageUpload } from "../middlewares/upload.js";
 import { addToCart, updateCartQuantity, removeFromCart, getCart } from "../controllers/cartController.js";
 import { placeDirectOrder, checkoutCOD, getMyOrders, getSavedAddress, trackOrder } from "../controllers/orderController.js";
+import { listCategories } from "../controllers/categoriesController.js";
 
 dotenv.config();
 
@@ -53,6 +54,7 @@ router.get("/public/:username", getUserProfileByUsername);
 router.get("/products", listProductsWithPricing);
 router.get("/product/:sku", getProductDetailsBySku);
 router.get("/products/sku/:sku", getProductDetailsBySku); // Added to match Postman request
+router.get("/categories", listCategories);
 router.get("/categories/:categoryname", getProductsByCategoryName);
 
 // Cart Routes
