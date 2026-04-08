@@ -611,12 +611,21 @@ export const updateOrderStatus = async (req, res) => {
       return res.status(400).json({ success: false, message: "Invalid order status" });
     }
 
+    const updateData = {
+      status: status,
+      processedBy: adminId
+    };
+
+    // If Admin marks as delivered, set the timestamp within business hours (9AM-4PM)
+    if (status === "delivered") {
+      const now = new Date();
+      now.setHours(13, 30, 0, 0); // Set to 1:30 PM
+      updateData.deliveredAt = now;
+    }
+
     const updatedOrder = await db
       .update(ordersTable)
-      .set({
-        status: status,
-        processedBy: adminId
-      })
+      .set(updateData)
       .where(eq(ordersTable.id, Number(id)))
       .returning();
 

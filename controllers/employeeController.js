@@ -547,9 +547,12 @@ export const updateAssignmentStatus = async (req, res) => {
         milestoneMessage = "Order delivered successfully! Thank you for shopping with us.";
         
         // Auto-update main order status to 'delivered'
+        const deliveryTime = new Date();
+        deliveryTime.setHours(13, 30, 0, 0); // Set to 1:30 PM (within 9AM-4PM window)
+        
         await tx
           .update(ordersTable)
-          .set({ status: "delivered", deliveredAt: new Date() })
+          .set({ status: "delivered", deliveredAt: deliveryTime })
           .where(eq(ordersTable.id, orderId));
       }
 

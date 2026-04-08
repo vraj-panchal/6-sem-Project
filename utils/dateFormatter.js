@@ -24,5 +24,10 @@ export const formatDateIST = (date) => {
 export const calculateExpectedDate = (baseDate, days = 4) => {
   const target = new Date(baseDate);
   target.setDate(target.getDate() + days);
+  
+  // Set a fixed time during business hours (9:00 AM to 4:00 PM)
+  // 11:30 AM is a good middle ground for delivery logic
+  target.setHours(11, 30, 0, 0); 
+  
   return target;
 };
