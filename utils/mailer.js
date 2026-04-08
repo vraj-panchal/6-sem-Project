@@ -467,10 +467,17 @@ Content-Type: text/html; charset=utf-8
         </table>
       </div>
 
-      <!-- Shipping -->
+      <!-- Shipping & Delivery -->
       <div style="margin-top: 40px; padding: 25px; background-color: #fdfdfd; border: 1px solid #e5e7eb; border-radius: 12px;">
+        <div style="margin-bottom: 20px; border-bottom: 1px solid #f3f4f6; padding-bottom: 15px;">
+          <h4 style="margin: 0 0 10px; color: #166534; font-size: 13px; text-transform: uppercase;">Expected Delivery</h4>
+          <p style="margin: 0; font-size: 16px; font-weight: 700; color: #1e5128;">${orderData.expectedDeliveryDate || "TBA"}</p>
+          <p style="margin: 4px 0 0; font-size: 12px; color: #6b7280;">Approximate arrival at your location</p>
+        </div>
+
         <h4 style="margin: 0 0 10px; color: #166534; font-size: 13px; text-transform: uppercase;">Shipping Address</h4>
         <p style="margin: 0; font-size: 14px; line-height: 1.6; color: #4b5563;">${orderData.deliveryAddress}</p>
+        
         <div style="margin-top: 20px;">
           <h4 style="margin: 0 0 8px; color: #166534; font-size: 13px; text-transform: uppercase;">Payment Method</h4>
           <span style="background: #fff7ed; color: #c2410c; padding: 6px 14px; border-radius: 50px; font-size: 12px; font-weight: 700; border: 1px solid #ffedd5;">${orderData.paymentType}: PENDING ON DELIVERY</span>

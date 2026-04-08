@@ -205,6 +205,7 @@ export const checkoutCOD = async (req, res) => {
       totalDiscount: totalMRP - finalAmount,
       deliveryAddress: fullDeliveryAddress,
       paymentType: "COD",
+      expectedDeliveryDate: formatDateIST(dbOrder[0].expectedDeliveryDate),
       items: orderItemsToInsert
     };
 
@@ -430,7 +431,8 @@ export const placeDirectOrder = async (req, res) => {
         mrp: itemData.mrp,
         discount: itemData.discount,
         totalItemPrice: totalItemPrice
-      }]
+      }],
+      expectedDeliveryDate: formatDateIST(createdOrder.expectedDeliveryDate)
     };
 
     sendOrderInvoiceEmail(userRecord[0].email, deliveryName, invoiceData).catch(err => console.error("Invoice Email Error:", err));
