@@ -1,4 +1,4 @@
-import { eq, and, gt, sql, desc, ne } from "drizzle-orm";
+import { eq, and, gt, sql, desc, ne, asc } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { db } from "../config/db.js";
 import { cartTable, cartItemsTable } from "../src/db/schema/cart.js";
