@@ -17,6 +17,32 @@ import { generateToken } from "../utils/generateTokens.js";
 import { sendEmployeeRegistrationEmail, sendLoginOTPEmail, sendPasswordResetOTPEmail } from "../utils/mailer.js";
 import jwt from "jsonwebtoken";
 
+// Helper to format date to Indian Standard Time (Production Level)
+const formatDateIST = (date) => {
+  if (!date) return null;
+  return new Date(date).toLocaleString("en-IN", {
+    timeZone: "Asia/Kolkata",
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true,
+  });
+};
+
+// Helper to calculate expected delivery range (3-4 days from a given date)
+const getExpectedDeliveryRange = (date) => {
+  if (!date) return "3-4 days";
+  const start = new Date(date);
+  const end = new Date(date);
+  start.setDate(start.getDate() + 3);
+  end.setDate(end.getDate() + 4);
+
+  const options = { day: '2-digit', month: 'short' };
+  return `${start.toLocaleDateString('en-IN', options)} to ${end.toLocaleDateString('en-IN', options)}`;
+};
+
 // ================= REGISTER EMPLOYEE (ADMIN ONLY) =================
 //  NO JWT HERE
 export const registerEmployee = async (req, res) => {
@@ -623,6 +649,8 @@ export const getAssignmentDetails = async (req, res) => {
       success: true,
       data: {
         ...assignment[0],
+        expectedDelivery: getExpectedDeliveryRange(assignment[0].createdAt),
+        createdAt: formatDateIST(assignment[0].createdAt),
         items: items.map(item => ({
           ...item,
           quantity: Number(item.quantity),

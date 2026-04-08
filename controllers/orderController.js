@@ -8,6 +8,31 @@ import { productsTable } from "../src/db/schema/product.js";
 import { userTable } from "../src/db/schema/users.js";
 import { orderAssignmentsTable } from "../src/db/schema/orderAssignments.js";
 import { rolesTable } from "../src/db/schema/roles.js";
+
+// Helper to format date to Indian Standard Time (Production Level)
+const formatDateIST = (date) => {
+  if (!date) return null;
+  return new Date(date).toLocaleString("en-IN", {
+    timeZone: "Asia/Kolkata",
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true,
+  });
+};
+
+// Helper to calculate expected delivery range (3-4 days from a given date)
+const getExpectedDeliveryRange = (date) => {
+  const start = new Date(date);
+  const end = new Date(date);
+  start.setDate(start.getDate() + 3);
+  end.setDate(end.getDate() + 4);
+
+  const options = { day: '2-digit', month: 'short' };
+  return `${start.toLocaleDateString('en-IN', options)} to ${end.toLocaleDateString('en-IN', options)}`;
+};
 import { productTransactionsTable } from "../src/db/schema/productTransactions.js";
 import { orderTrackingTable } from "../src/db/schema/orderTracking.js";
 import { sendOrderInvoiceEmail } from "../utils/mailer.js";
@@ -209,6 +234,7 @@ export const checkoutCOD = async (req, res) => {
     return res.status(200).json({ 
       success: true, 
       message: "Order placed successfully! (Cash On Delivery)",
+      expectedDelivery: getExpectedDeliveryRange(new Date()),
       orderNumber: dbOrder[0].orderNumber
     });
 
@@ -441,6 +467,7 @@ export const placeDirectOrder = async (req, res) => {
         deliveryName,
         deliveryPhone,
         deliveryAddress,
+        expectedDelivery: getExpectedDeliveryRange(new Date()),
       },
     });
 
@@ -488,7 +515,20 @@ export const getMyOrders = async (req, res) => {
           .leftJoin(productsTable, eq(productBatchesTable.productId, productsTable.id))
           .where(eq(orderItemsTable.orderId, order.orderId));
 
-        return { ...order, items };
+        // Calculate actual delivery date if status is 'delivered'
+        const deliveredEvent = await db
+          .select({ createdAt: orderTrackingTable.createdAt })
+          .from(orderTrackingTable)
+          .where(and(eq(orderTrackingTable.orderId, order.orderId), eq(orderTrackingTable.status, "delivered")))
+          .limit(1);
+
+        return { 
+          ...order, 
+          expectedDelivery: getExpectedDeliveryRange(order.createdAt),
+          receivedAt: deliveredEvent.length > 0 ? formatDateIST(deliveredEvent[0].createdAt) : null,
+          createdAt: formatDateIST(order.createdAt),
+          items 
+        };
       })
     );
 
@@ -772,12 +812,19 @@ export const getAdminOrderDetail = async (req, res) => {
       .where(eq(orderTrackingTable.orderId, Number(id)))
       .orderBy(asc(orderTrackingTable.createdAt));
 
+    // 4. Determine Actual Receipt Date
+    const deliveredEvent = timeline.find(t => t.status === "delivered");
+
     return res.status(200).json({
       success: true,
       data: {
         ...orderData[0],
+        expectedDelivery: getExpectedDeliveryRange(orderData[0].createdAt),
+        receivedAt: deliveredEvent ? formatDateIST(deliveredEvent.createdAt) : null,
+        createdAt: formatDateIST(orderData[0].createdAt),
+        assignedAt: formatDateIST(orderData[0].assignedAt),
         items: items.map(i => ({ ...i, quantity: Number(i.quantity) })),
-        timeline
+        timeline: timeline.map(t => ({ ...t, createdAt: formatDateIST(t.createdAt) }))
       }
     });
 
