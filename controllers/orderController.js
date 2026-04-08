@@ -531,26 +531,9 @@ export const getAllOrdersForAdmin = async (req, res) => {
       .leftJoin(employees, eq(orderAssignmentsTable.employeeId, employees.id))
       .orderBy(desc(ordersTable.createdAt));
 
-    // Get items for each order
-    const ordersWithItems = await Promise.all(
-      orders.map(async (order) => {
-        const items = await db
-          .select({
-            productName: orderItemsTable.productName,
-            quantity: orderItemsTable.quantity,
-            pricePerUnit: orderItemsTable.pricePerUnit,
-            totalItemPrice: orderItemsTable.totalItemPrice,
-          })
-          .from(orderItemsTable)
-          .where(eq(orderItemsTable.orderId, order.orderId));
-
-        return { ...order, items };
-      })
-    );
-
     return res.status(200).json({
       success: true,
-      data: ordersWithItems,
+      data: orders,
     });
   } catch (error) {
     console.error("Get All Orders (Admin) Error:", error);
@@ -725,6 +708,81 @@ export const trackOrder = async (req, res) => {
     });
   } catch (error) {
     console.error("Track Order Error:", error);
+    return res.status(500).json({ success: false, message: "Internal server error" });
+  }
+};
+// GET SPECIFIC ORDER DETAIL (ADMIN)
+export const getAdminOrderDetail = async (req, res) => {
+  try {
+    const { id } = req.params; // orderId
+    const employees = alias(userTable, "employees");
+
+    // 1. Fetch High Level Order Info + Customer info + Assignment info
+    const orderData = await db
+      .select({
+        orderId: ordersTable.id,
+        orderNumber: ordersTable.orderNumber,
+        status: ordersTable.status,
+        subtotal: ordersTable.subtotal,
+        totalTax: ordersTable.totalTax,
+        finalAmount: ordersTable.finalAmount,
+        deliveryAddress: ordersTable.deliveryAddress,
+        paymentType: ordersTable.paymentType,
+        createdAt: ordersTable.createdAt,
+        customerName: userTable.username,
+        customerEmail: userTable.email,
+        customerPhone: userTable.phonenumber,
+        assignedEmployeeId: orderAssignmentsTable.employeeId,
+        assignedEmployeeName: employees.username,
+        assignmentStatus: orderAssignmentsTable.status,
+        assignedAt: orderAssignmentsTable.assignedAt,
+      })
+      .from(ordersTable)
+      .leftJoin(userTable, eq(ordersTable.userId, userTable.id))
+      .leftJoin(orderAssignmentsTable, eq(ordersTable.id, orderAssignmentsTable.orderId))
+      .leftJoin(employees, eq(orderAssignmentsTable.employeeId, employees.id))
+      .where(eq(ordersTable.id, Number(id)))
+      .limit(1);
+
+    if (orderData.length === 0) {
+      return res.status(404).json({ success: false, message: "Order not found" });
+    }
+
+    // 2. Fetch Order Items with Product/Batch Details
+    const items = await db
+      .select({
+        productName: orderItemsTable.productName,
+        quantity: orderItemsTable.quantity,
+        pricePerUnit: orderItemsTable.pricePerUnit,
+        totalItemPrice: orderItemsTable.totalItemPrice,
+        unit: productBatchesTable.unit,
+        baseWeight: productBatchesTable.baseWeight,
+        baseUnit: productBatchesTable.baseUnit,
+        imageUrl: productsTable.imageUrl,
+      })
+      .from(orderItemsTable)
+      .leftJoin(productBatchesTable, eq(orderItemsTable.batchId, productBatchesTable.id))
+      .leftJoin(productsTable, eq(productBatchesTable.productId, productsTable.id))
+      .where(eq(orderItemsTable.orderId, Number(id)));
+
+    // 3. Fetch Tracking Timeline
+    const timeline = await db
+      .select()
+      .from(orderTrackingTable)
+      .where(eq(orderTrackingTable.orderId, Number(id)))
+      .orderBy(asc(orderTrackingTable.createdAt));
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        ...orderData[0],
+        items: items.map(i => ({ ...i, quantity: Number(i.quantity) })),
+        timeline
+      }
+    });
+
+  } catch (error) {
+    console.error("Get Order Detail (Admin) Error:", error);
     return res.status(500).json({ success: false, message: "Internal server error" });
   }
 };

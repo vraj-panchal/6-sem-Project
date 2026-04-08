@@ -10,7 +10,8 @@ import {
   updateProfileImage,
   getEmployeeProfileByUsername,
   getAssignedOrders,
-  updateAssignmentStatus
+  updateAssignmentStatus,
+  getAssignmentDetails
 } from "../controllers/employeeController.js";
 
 import { isAdminLoggedIn } from "../middlewares/isAdminLoggedIn.js";
@@ -51,6 +52,7 @@ router.get("/categories/:categoryname", isEmployeeLoggedIn, getProductsByCategor
 
 // Order Fulfillment
 router.get("/assigned-orders", isEmployeeLoggedIn, getAssignedOrders);
+router.get("/assignment/:id/details", isEmployeeLoggedIn, getAssignmentDetails);
 router.put("/assignment/:id/status", isEmployeeLoggedIn, upload.none(), updateAssignmentStatus);
 
 export default router;

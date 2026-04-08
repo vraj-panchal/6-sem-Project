@@ -44,7 +44,8 @@ import {
 import { 
   getAllOrdersForAdmin, 
   updateOrderStatus,
-  assignOrderToEmployee
+  assignOrderToEmployee,
+  getAdminOrderDetail
 } from "../controllers/orderController.js";
 
 dotenv.config();
@@ -102,6 +103,7 @@ router.post("/batches/:id/adjuststock", isAdminLoggedIn, adjustBatchStock);
 
 // Order Management
 router.get("/orders", isAdminLoggedIn, getAllOrdersForAdmin);
+router.get("/orders/:id", isAdminLoggedIn, getAdminOrderDetail);
 router.put("/orders/:id/status", isAdminLoggedIn, upload.none(), updateOrderStatus);
 router.put("/orders/:id/assign", isAdminLoggedIn, assignOrderToEmployee);
 

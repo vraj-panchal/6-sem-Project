@@ -571,3 +571,68 @@ export const updateAssignmentStatus = async (req, res) => {
     return res.status(500).json({ success: false, message: "Internal server error" });
   }
 };
+// ================= GET ASSIGNMENT DETAILS (ITEMS LIST) =================
+export const getAssignmentDetails = async (req, res) => {
+  try {
+    const { id } = req.params; // assignmentId
+    const employeeId = req.employee.id;
+
+    // 1. Verify availability and ownership
+    const assignment = await db
+      .select({
+        orderId: orderAssignmentsTable.orderId,
+        assignmentStatus: orderAssignmentsTable.status,
+        orderNumber: ordersTable.orderNumber,
+        deliveryAddress: ordersTable.deliveryAddress,
+        finalAmount: ordersTable.finalAmount,
+        paymentType: ordersTable.paymentType,
+        createdAt: ordersTable.createdAt,
+      })
+      .from(orderAssignmentsTable)
+      .innerJoin(ordersTable, eq(orderAssignmentsTable.orderId, ordersTable.id))
+      .where(and(
+        eq(orderAssignmentsTable.id, Number(id)),
+        eq(orderAssignmentsTable.employeeId, employeeId)
+      ))
+      .limit(1);
+
+    if (assignment.length === 0) {
+      return res.status(404).json({ success: false, message: "Assignment not found or unauthorized" });
+    }
+
+    const orderId = assignment[0].orderId;
+
+    // 2. Fetch all items with product details
+    const items = await db
+      .select({
+        productName: orderItemsTable.productName,
+        quantity: orderItemsTable.quantity,
+        pricePerUnit: orderItemsTable.pricePerUnit,
+        totalItemPrice: orderItemsTable.totalItemPrice,
+        unit: productBatchesTable.unit,
+        baseWeight: productBatchesTable.baseWeight,
+        baseUnit: productBatchesTable.baseUnit,
+        imageUrl: productsTable.imageUrl,
+      })
+      .from(orderItemsTable)
+      .leftJoin(productBatchesTable, eq(orderItemsTable.batchId, productBatchesTable.id))
+      .leftJoin(productsTable, eq(productBatchesTable.productId, productsTable.id))
+      .where(eq(orderItemsTable.orderId, orderId));
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        ...assignment[0],
+        items: items.map(item => ({
+          ...item,
+          quantity: Number(item.quantity),
+          weightInfo: `${item.baseWeight || ""} ${item.baseUnit || ""}`.trim()
+        }))
+      }
+    });
+
+  } catch (err) {
+    console.error("Get Assignment Details Error:", err);
+    return res.status(500).json({ success: false, message: "Internal server error" });
+  }
+};
