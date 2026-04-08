@@ -1,4 +1,4 @@
-import { eq, and, gt, sql, desc, ne, asc } from "drizzle-orm";
+import { eq, and, gt, sql, desc, ne, asc, or } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { db } from "../config/db.js";
 import { cartTable, cartItemsTable } from "../src/db/schema/cart.js";
@@ -8,6 +8,8 @@ import { productsTable } from "../src/db/schema/product.js";
 import { userTable } from "../src/db/schema/users.js";
 import { orderAssignmentsTable } from "../src/db/schema/orderAssignments.js";
 import { rolesTable } from "../src/db/schema/roles.js";
+import { orderTrackingTable } from "../src/db/schema/orderTracking.js";
+import { productTransactionsTable } from "../src/db/schema/productTransactions.js";
 
 import { formatDateIST, calculateExpectedDate } from "../utils/dateFormatter.js";
 import { sendOrderInvoiceEmail } from "../utils/mailer.js";
@@ -216,7 +218,10 @@ export const checkoutCOD = async (req, res) => {
 
   } catch (error) {
     console.error("Checkout Error:", error);
-    return res.status(500).json({ success: false, message: "Internal server error" });
+    return res.status(500).json({ 
+      success: false, 
+      message: error.message || "Failed to place order. Please try again." 
+    });
   }
 };
 
@@ -255,7 +260,10 @@ export const getSavedAddress = async (req, res) => {
 
   } catch (error) {
     console.error("Get Saved Address Error:", error);
-    return res.status(500).json({ success: false, message: "Internal server error" });
+    return res.status(500).json({ 
+      success: false, 
+      message: error.message || "Failed to retrieve saved address." 
+    });
   }
 };
 
@@ -450,7 +458,10 @@ export const placeDirectOrder = async (req, res) => {
 
   } catch (error) {
     console.error("Direct Order Error:", error);
-    return res.status(500).json({ success: false, message: error.message || "Internal server error" });
+    return res.status(500).json({ 
+      success: false, 
+      message: error.message || "Failed to place direct order. Please check stock and try again." 
+    });
   }
 };
 
@@ -518,7 +529,10 @@ export const getMyOrders = async (req, res) => {
 
   } catch (error) {
     console.error("Get Orders Error:", error);
-    return res.status(500).json({ success: false, message: "Internal server error" });
+    return res.status(500).json({ 
+      success: false, 
+      message: error.message || "Failed to fetch order history." 
+    });
   }
 };
 
@@ -575,7 +589,10 @@ export const getAllOrdersForAdmin = async (req, res) => {
     });
   } catch (error) {
     console.error("Get All Orders (Admin) Error:", error);
-    return res.status(500).json({ success: false, message: "Internal server error" });
+    return res.status(500).json({ 
+      success: false, 
+      message: error.message || "Failed to retrieve orders for admin." 
+    });
   }
 };
 
@@ -626,7 +643,10 @@ export const updateOrderStatus = async (req, res) => {
     });
   } catch (error) {
     console.error("Update Order Status Error:", error);
-    return res.status(500).json({ success: false, message: "Internal server error" });
+    return res.status(500).json({ 
+      success: false, 
+      message: error.message || "Failed to update order status." 
+    });
   }
 };
 
@@ -707,7 +727,10 @@ export const assignOrderToEmployee = async (req, res) => {
       return res.status(404).json({ success: false, message: error.message });
     }
     console.error("Assign Order Error:", error);
-    return res.status(500).json({ success: false, message: error.message || "Internal server error" });
+    return res.status(500).json({ 
+      success: false, 
+      message: error.message || "Failed to assign order to employee." 
+    });
   }
 };
 
@@ -746,9 +769,13 @@ export const trackOrder = async (req, res) => {
     });
   } catch (error) {
     console.error("Track Order Error:", error);
-    return res.status(500).json({ success: false, message: "Internal server error" });
+    return res.status(500).json({ 
+      success: false, 
+      message: error.message || "Failed to fetch tracking timeline." 
+    });
   }
 };
+
 // GET SPECIFIC ORDER DETAIL (ADMIN)
 export const getAdminOrderDetail = async (req, res) => {
   try {
@@ -815,18 +842,49 @@ export const getAdminOrderDetail = async (req, res) => {
     return res.status(200).json({
       success: true,
       data: {
-        ...orderData[0],
+        orderId: orderData[0].orderId,
+        orderNumber: orderData[0].orderNumber,
+        status: orderData[0].status,
+        subtotal: orderData[0].subtotal,
+        totalTax: orderData[0].totalTax,
+        finalAmount: orderData[0].finalAmount,
+        deliveryAddress: orderData[0].deliveryAddress,
+        paymentType: orderData[0].paymentType,
+        customerName: orderData[0].customerName,
+        customerEmail: orderData[0].customerEmail,
+        customerPhone: orderData[0].customerPhone,
+        assignedEmployeeId: orderData[0].assignedEmployeeId,
+        assignedEmployeeName: orderData[0].assignedEmployeeName,
+        assignmentStatus: orderData[0].assignmentStatus,
+        assignedAt: formatDateIST(orderData[0].assignedAt),
         expectedDelivery: formatDateIST(orderData[0].expectedDeliveryDate),
         receivedAt: formatDateIST(orderData[0].deliveredAt),
         createdAt: formatDateIST(orderData[0].createdAt),
-        assignedAt: formatDateIST(orderData[0].assignedAt),
-        items: items.map(i => ({ ...i, quantity: Number(i.quantity) })),
-        timeline: timeline.map(t => ({ ...t, createdAt: formatDateIST(t.createdAt) }))
+        items: items.map(i => ({
+          productName: i.productName,
+          quantity: Number(i.quantity),
+          pricePerUnit: i.pricePerUnit,
+          totalItemPrice: i.totalItemPrice,
+          unit: i.unit,
+          baseWeight: i.baseWeight,
+          baseUnit: i.baseUnit,
+          imageUrl: i.imageUrl
+        })),
+        timeline: timeline.map(t => ({
+          id: t.id,
+          orderId: t.orderId,
+          status: t.status,
+          message: t.message,
+          createdAt: formatDateIST(t.createdAt)
+        }))
       }
     });
 
   } catch (error) {
-    console.error("Get Order Detail (Admin) Error:", error);
-    return res.status(500).json({ success: false, message: "Internal server error" });
+    console.error("Get Order Detail Error:", error);
+    return res.status(500).json({ 
+      success: false, 
+      message: error.message || "Failed to retrieve order details." 
+    });
   }
 };

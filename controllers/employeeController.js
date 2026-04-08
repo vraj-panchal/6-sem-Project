@@ -398,7 +398,7 @@ export const forgotPassword = async (req, res) => {
     console.error("Forgot Password Error:", err);
     return res.status(500).json({
       success: false,
-      message: "Internal Server Error",
+      message: err.message || "Internal Server Error",
     });
   }
 };
@@ -497,7 +497,10 @@ export const getAssignedOrders = async (req, res) => {
     });
   } catch (err) {
     console.error("Get Assigned Orders Error:", err);
-    return res.status(500).json({ success: false, message: "Internal server error" });
+    return res.status(500).json({ 
+      success: false, 
+      message: err.message || "Internal server error" 
+    });
   }
 };
 
@@ -569,7 +572,10 @@ export const updateAssignmentStatus = async (req, res) => {
       return res.status(404).json({ success: false, message: err.message });
     }
     console.error("Update Assignment Error:", err);
-    return res.status(500).json({ success: false, message: "Internal server error" });
+    return res.status(500).json({ 
+      success: false, 
+      message: err.message || "Internal server error" 
+    });
   }
 };
 // ================= GET ASSIGNMENT DETAILS (ITEMS LIST) =================
@@ -647,6 +653,9 @@ export const getAssignmentDetails = async (req, res) => {
 
   } catch (err) {
     console.error("Get Assignment Details Error:", err);
-    return res.status(500).json({ success: false, message: "Internal server error" });
+    return res.status(500).json({ 
+      success: false, 
+      message: err.message || "Internal server error" 
+    });
   }
 };

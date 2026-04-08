@@ -508,7 +508,7 @@ export const forgotAdminPassword = async (req, res) => {
     console.error("ForgotAdminPassword Error:", err.message);
     return res.status(500).json({
       success: false,
-      message: "Internal Server Error",
+      message: err.message || "Internal Server Error",
     });
   }
 };
@@ -643,7 +643,7 @@ export const getDashboardStats = async (req, res) => {
     console.error("Dashboard Analytics Error:", error);
     return res.status(500).json({
       success: false,
-      message: "Internal Server Error",
+      message: error.message || "Internal Server Error",
     });
   }
 };
