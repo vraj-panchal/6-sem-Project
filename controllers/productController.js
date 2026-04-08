@@ -28,12 +28,13 @@ export const listProductsWithPricing = async (req, res) => {
         batchNo: productBatchesTable.batchNo,
         expiryDate: productBatchesTable.expiryDate,
         stock: productBatchesTable.currentStock,
+        totalStock: sql`cast(sum(${productBatchesTable.currentStock}) OVER (PARTITION BY ${productBatchesTable.productId}) as float)`.mapWith(Number).as("totalStock"),
         mrp: productBatchesTable.mrp,
         basePrice: productBatchesTable.basePrice,
         discount: productBatchesTable.discount,
         rowNumber: sql`
           ROW_NUMBER() OVER (
-            PARTITION BY ${productBatchesTable.productId}, ${productBatchesTable.sku}
+            PARTITION BY ${productBatchesTable.productId}
             ORDER BY ${productBatchesTable.expiryDate} ASC
           )
         `.as("rowNumber"),
@@ -87,7 +88,7 @@ export const listProductsWithPricing = async (req, res) => {
         categoryName: categoriesTable.categoryName,
         batchNo: rankedBatches.batchNo,
         expiryDate: rankedBatches.expiryDate,
-        stock: rankedBatches.stock,
+        stock: rankedBatches.totalStock,
         mrp: rankedBatches.mrp,
         basePrice: rankedBatches.basePrice,
         discount: rankedBatches.discount,
@@ -617,6 +618,7 @@ export const getProductsByCategoryName = async (req, res) => {
         batchNo: productBatchesTable.batchNo,
         expiryDate: productBatchesTable.expiryDate,
         stock: productBatchesTable.currentStock,
+        totalStock: sql`cast(sum(${productBatchesTable.currentStock}) OVER (PARTITION BY ${productBatchesTable.productId}) as float)`.mapWith(Number).as("totalStock"),
         mrp: productBatchesTable.mrp,
         basePrice: productBatchesTable.basePrice,
         discount: productBatchesTable.discount,
@@ -671,7 +673,7 @@ export const getProductsByCategoryName = async (req, res) => {
         baseUnit: rankedBatches.baseUnit,
         batchNo: rankedBatches.batchNo,
         expiryDate: rankedBatches.expiryDate,
-        stock: rankedBatches.stock,
+        stock: rankedBatches.totalStock,
         mrp: rankedBatches.mrp,
         basePrice: rankedBatches.basePrice,
         discount: rankedBatches.discount,
@@ -849,6 +851,13 @@ export const getProductDetailsBySku = async (req, res) => {
         availableBatches: allValidBatches.map(b => ({
           batchId: b.id,
           batchNo: b.batchNo,
+          sku: b.sku,
+          unit: b.unit,
+          baseWeight: b.baseWeight,
+          baseUnit: b.baseUnit,
+          mrp: Number(b.mrp),
+          basePrice: Number(b.basePrice),
+          discount: Number(b.discount),
           expiryDate: b.expiryDate,
           stock: Number(b.currentStock)
         })),
