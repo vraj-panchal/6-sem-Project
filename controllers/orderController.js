@@ -9,32 +9,7 @@ import { userTable } from "../src/db/schema/users.js";
 import { orderAssignmentsTable } from "../src/db/schema/orderAssignments.js";
 import { rolesTable } from "../src/db/schema/roles.js";
 
-// Helper to format date to Indian Standard Time (Production Level)
-const formatDateIST = (date) => {
-  if (!date) return null;
-  return new Date(date).toLocaleString("en-IN", {
-    timeZone: "Asia/Kolkata",
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: true,
-  });
-};
-
-// Helper to calculate expected delivery range (3-4 days from a given date)
-const getExpectedDeliveryRange = (date) => {
-  const start = new Date(date);
-  const end = new Date(date);
-  start.setDate(start.getDate() + 3);
-  end.setDate(end.getDate() + 4);
-
-  const options = { day: '2-digit', month: 'short' };
-  return `${start.toLocaleDateString('en-IN', options)} to ${end.toLocaleDateString('en-IN', options)}`;
-};
-import { productTransactionsTable } from "../src/db/schema/productTransactions.js";
-import { orderTrackingTable } from "../src/db/schema/orderTracking.js";
+import { formatDateIST, calculateExpectedDate } from "../utils/dateFormatter.js";
 import { sendOrderInvoiceEmail } from "../utils/mailer.js";
 
 // HELPER: Generate a custom Order Number (e.g., ORD-240405-X9B)
@@ -160,6 +135,7 @@ export const checkoutCOD = async (req, res) => {
         deliveryAddress: fullDeliveryAddress,
         paymentType: "COD",
         status: "pending",
+        expectedDeliveryDate: calculateExpectedDate(new Date()),
       }).returning();
 
       const orderId = newOrder[0].id;
@@ -234,7 +210,7 @@ export const checkoutCOD = async (req, res) => {
     return res.status(200).json({ 
       success: true, 
       message: "Order placed successfully! (Cash On Delivery)",
-      expectedDelivery: getExpectedDeliveryRange(new Date()),
+      expectedDelivery: formatDateIST(dbOrder[0].expectedDeliveryDate),
       orderNumber: dbOrder[0].orderNumber
     });
 
@@ -376,6 +352,7 @@ export const placeDirectOrder = async (req, res) => {
         deliveryAddress: fullDeliveryAddress,
         paymentType: "COD",
         status: "pending",
+        expectedDeliveryDate: calculateExpectedDate(new Date()),
       }).returning();
 
       createdOrder = newOrder[0];
@@ -467,7 +444,7 @@ export const placeDirectOrder = async (req, res) => {
         deliveryName,
         deliveryPhone,
         deliveryAddress,
-        expectedDelivery: getExpectedDeliveryRange(new Date()),
+        expectedDelivery: formatDateIST(createdOrder.expectedDeliveryDate),
       },
     });
 
@@ -493,11 +470,13 @@ export const getMyOrders = async (req, res) => {
         finalAmount: ordersTable.finalAmount,
         deliveryAddress: ordersTable.deliveryAddress,
         paymentType: ordersTable.paymentType,
+        expectedDeliveryDate: ordersTable.expectedDeliveryDate,
+        deliveredAt: ordersTable.deliveredAt,
         createdAt: ordersTable.createdAt,
       })
       .from(ordersTable)
       .where(eq(ordersTable.userId, userId))
-      .orderBy(ordersTable.createdAt);
+      .orderBy(desc(ordersTable.createdAt));
 
     // Get items for each order
     const ordersWithItems = await Promise.all(
@@ -515,19 +494,19 @@ export const getMyOrders = async (req, res) => {
           .leftJoin(productsTable, eq(productBatchesTable.productId, productsTable.id))
           .where(eq(orderItemsTable.orderId, order.orderId));
 
-        // Calculate actual delivery date if status is 'delivered'
-        const deliveredEvent = await db
-          .select({ createdAt: orderTrackingTable.createdAt })
-          .from(orderTrackingTable)
-          .where(and(eq(orderTrackingTable.orderId, order.orderId), eq(orderTrackingTable.status, "delivered")))
-          .limit(1);
-
         return { 
-          ...order, 
-          expectedDelivery: getExpectedDeliveryRange(order.createdAt),
-          receivedAt: deliveredEvent.length > 0 ? formatDateIST(deliveredEvent[0].createdAt) : null,
+          orderId: order.orderId,
+          orderNumber: order.orderNumber,
+          status: order.status,
+          subtotal: order.subtotal,
+          totalTax: order.totalTax,
+          finalAmount: order.finalAmount,
+          deliveryAddress: order.deliveryAddress,
+          paymentType: order.paymentType,
+          expectedDeliveryDate: formatDateIST(order.expectedDeliveryDate),
+          receivedAt: formatDateIST(order.deliveredAt),
           createdAt: formatDateIST(order.createdAt),
-          items 
+          items: items 
         };
       })
     );
@@ -562,6 +541,8 @@ export const getAllOrdersForAdmin = async (req, res) => {
         customerName: userTable.username,
         customerEmail: userTable.email,
         customerPhone: userTable.phonenumber,
+        expectedDeliveryDate: ordersTable.expectedDeliveryDate,
+        deliveredAt: ordersTable.deliveredAt,
         assignmentStatus: orderAssignmentsTable.status,
         assignedEmployeeName: employees.username,
       })
@@ -573,7 +554,24 @@ export const getAllOrdersForAdmin = async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      data: orders,
+      data: orders.map(o => ({
+        orderId: o.orderId,
+        orderNumber: o.orderNumber,
+        status: o.status,
+        subtotal: o.subtotal,
+        totalTax: o.totalTax,
+        finalAmount: o.finalAmount,
+        deliveryAddress: o.deliveryAddress,
+        paymentType: o.paymentType,
+        customerName: o.customerName,
+        customerEmail: o.customerEmail,
+        customerPhone: o.customerPhone,
+        assignmentStatus: o.assignmentStatus,
+        assignedEmployeeName: o.assignedEmployeeName,
+        createdAt: formatDateIST(o.createdAt),
+        expectedDeliveryDate: formatDateIST(o.expectedDeliveryDate),
+        receivedAt: formatDateIST(o.deliveredAt)
+      })),
     });
   } catch (error) {
     console.error("Get All Orders (Admin) Error:", error);
@@ -776,6 +774,8 @@ export const getAdminOrderDetail = async (req, res) => {
         assignedEmployeeName: employees.username,
         assignmentStatus: orderAssignmentsTable.status,
         assignedAt: orderAssignmentsTable.assignedAt,
+        expectedDeliveryDate: ordersTable.expectedDeliveryDate,
+        deliveredAt: ordersTable.deliveredAt,
       })
       .from(ordersTable)
       .leftJoin(userTable, eq(ordersTable.userId, userTable.id))
@@ -812,15 +812,12 @@ export const getAdminOrderDetail = async (req, res) => {
       .where(eq(orderTrackingTable.orderId, Number(id)))
       .orderBy(asc(orderTrackingTable.createdAt));
 
-    // 4. Determine Actual Receipt Date
-    const deliveredEvent = timeline.find(t => t.status === "delivered");
-
     return res.status(200).json({
       success: true,
       data: {
         ...orderData[0],
-        expectedDelivery: getExpectedDeliveryRange(orderData[0].createdAt),
-        receivedAt: deliveredEvent ? formatDateIST(deliveredEvent.createdAt) : null,
+        expectedDelivery: formatDateIST(orderData[0].expectedDeliveryDate),
+        receivedAt: formatDateIST(orderData[0].deliveredAt),
         createdAt: formatDateIST(orderData[0].createdAt),
         assignedAt: formatDateIST(orderData[0].assignedAt),
         items: items.map(i => ({ ...i, quantity: Number(i.quantity) })),

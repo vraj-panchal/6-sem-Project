@@ -29,6 +29,9 @@ export const ordersTable = pgTable("orders", {
   orderNumber: varchar("order_number", { length: 50 }),
   
   createdAt: timestamp("created_at").defaultNow(),
+  
+  expectedDeliveryDate: timestamp("expected_delivery_date"),
+  deliveredAt: timestamp("delivered_at"),
 });
 
 export const orderItemsTable = pgTable("order_items", {

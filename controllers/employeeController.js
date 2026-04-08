@@ -14,34 +14,9 @@ import {
 } from "../validations/employeeValidator.js";
 import { forgotPasswordSchema } from "../validations/userValidator.js";
 import { generateToken } from "../utils/generateTokens.js";
+import { formatDateIST, calculateExpectedDate } from "../utils/dateFormatter.js";
 import { sendEmployeeRegistrationEmail, sendLoginOTPEmail, sendPasswordResetOTPEmail } from "../utils/mailer.js";
 import jwt from "jsonwebtoken";
-
-// Helper to format date to Indian Standard Time (Production Level)
-const formatDateIST = (date) => {
-  if (!date) return null;
-  return new Date(date).toLocaleString("en-IN", {
-    timeZone: "Asia/Kolkata",
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: true,
-  });
-};
-
-// Helper to calculate expected delivery range (3-4 days from a given date)
-const getExpectedDeliveryRange = (date) => {
-  if (!date) return "3-4 days";
-  const start = new Date(date);
-  const end = new Date(date);
-  start.setDate(start.getDate() + 3);
-  end.setDate(end.getDate() + 4);
-
-  const options = { day: '2-digit', month: 'short' };
-  return `${start.toLocaleDateString('en-IN', options)} to ${end.toLocaleDateString('en-IN', options)}`;
-};
 
 // ================= REGISTER EMPLOYEE (ADMIN ONLY) =================
 //  NO JWT HERE
@@ -571,7 +546,7 @@ export const updateAssignmentStatus = async (req, res) => {
         // Auto-update main order status to 'delivered'
         await tx
           .update(ordersTable)
-          .set({ status: "delivered" })
+          .set({ status: "delivered", deliveredAt: new Date() })
           .where(eq(ordersTable.id, orderId));
       }
 
@@ -648,12 +623,23 @@ export const getAssignmentDetails = async (req, res) => {
     return res.status(200).json({
       success: true,
       data: {
-        ...assignment[0],
-        expectedDelivery: getExpectedDeliveryRange(assignment[0].createdAt),
+        orderId: assignment[0].orderId,
+        assignmentStatus: assignment[0].assignmentStatus,
+        orderNumber: assignment[0].orderNumber,
+        deliveryAddress: assignment[0].deliveryAddress,
+        finalAmount: assignment[0].finalAmount,
+        paymentType: assignment[0].paymentType,
+        expectedDelivery: formatDateIST(calculateExpectedDate(assignment[0].createdAt)),
         createdAt: formatDateIST(assignment[0].createdAt),
         items: items.map(item => ({
-          ...item,
+          productName: item.productName,
           quantity: Number(item.quantity),
+          pricePerUnit: item.pricePerUnit,
+          totalItemPrice: item.totalItemPrice,
+          unit: item.unit,
+          baseWeight: item.baseWeight,
+          baseUnit: item.baseUnit,
+          imageUrl: item.imageUrl,
           weightInfo: `${item.baseWeight || ""} ${item.baseUnit || ""}`.trim()
         }))
       }

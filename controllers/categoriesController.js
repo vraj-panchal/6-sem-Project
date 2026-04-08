@@ -4,19 +4,7 @@ import { categoriesTable } from "../src/db/schema/categories.js";
 import { productsTable } from "../src/db/schema/product.js";
 import { createCategorySchema, updateCategorySchema } from "../validations/categoriesValidator.js";
 
-const formatDateIST = (date) => {
-  if (!date) return null;
-  return new Date(date).toLocaleString("en-IN", {
-    timeZone: "Asia/Kolkata",
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-    hour12: true,
-  });
-};
+import { formatDateIST } from "../utils/dateFormatter.js";
 
 // List Categories
 export const listCategories = async (req, res) => {
@@ -35,7 +23,9 @@ export const listCategories = async (req, res) => {
     else {
       // Map to proper Indian Standard Time
       const formattedCategories = categories.map((cat) => ({
-        ...cat,
+        id: cat.id,
+        categoryName: cat.categoryName,
+        allowedUnits: cat.allowedUnits,
         createdAt: formatDateIST(cat.createdAt),
         updatedAt: formatDateIST(cat.updatedAt),
       }));

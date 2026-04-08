@@ -19,19 +19,7 @@ const JWT_KEY = process.env.JWT_KEY;
 
 
 
-const formatDateIST = (date) => {
-  if (!date) return null;
-  return new Date(date).toLocaleString("en-IN", {
-    timeZone: "Asia/Kolkata",
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-    hour12: true,
-  });
-};
+import { formatDateIST } from "../utils/dateFormatter.js";
 
 
 // --------------------- VIEW PROFILE BY USERNAME ---------------------
@@ -112,7 +100,13 @@ export const getAllUsers = async (req, res) => {
 
     // Format dates for response
     const formattedUsers = users.map((user) => ({
-      ...user,
+      id: user.id,
+      username: user.username,
+      email: user.email,
+      phonenumber: user.phonenumber,
+      profile_image: user.profile_image,
+      role: user.role,
+      status: user.status,
       created_at: formatDateIST(user.created_at),
       last_login: formatDateIST(user.last_login),
     }));
@@ -148,7 +142,13 @@ export const getAllEmployees = async (req, res) => {
 
     // Format dates for response
     const formattedEmployees = employees.map((emp) => ({
-      ...emp,
+      id: emp.id,
+      username: emp.username,
+      email: emp.email,
+      phonenumber: emp.phonenumber,
+      profile_image: emp.profile_image,
+      role: emp.role,
+      status: emp.status,
       created_at: formatDateIST(emp.created_at),
       last_login: formatDateIST(emp.last_login),
     }));
