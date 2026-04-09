@@ -788,6 +788,99 @@ export const trackOrder = async (req, res) => {
   }
 };
 
+// GET SPECIFIC ORDER DETAIL (CUSTOMER)
+export const getUserOrderDetail = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { orderNumber } = req.params;
+
+    // 1. Fetch Order Info (verify ownership)
+    const orderData = await db
+      .select({
+        id: ordersTable.id,
+        orderNumber: ordersTable.orderNumber,
+        status: ordersTable.status,
+        subtotal: ordersTable.subtotal,
+        totalTax: ordersTable.totalTax,
+        finalAmount: ordersTable.finalAmount,
+        deliveryAddress: ordersTable.deliveryAddress,
+        paymentType: ordersTable.paymentType,
+        createdAt: ordersTable.createdAt,
+        expectedDeliveryDate: ordersTable.expectedDeliveryDate,
+        deliveredAt: ordersTable.deliveredAt,
+      })
+      .from(ordersTable)
+      .where(and(eq(ordersTable.orderNumber, orderNumber), eq(ordersTable.userId, userId)))
+      .limit(1);
+
+    if (orderData.length === 0) {
+      return res.status(404).json({ success: false, message: "Order not found" });
+    }
+
+    const orderId = orderData[0].id;
+
+    // 2. Fetch Order Items
+    const items = await db
+      .select({
+        productName: orderItemsTable.productName,
+        quantity: orderItemsTable.quantity,
+        pricePerUnit: orderItemsTable.pricePerUnit,
+        totalItemPrice: orderItemsTable.totalItemPrice,
+        imageUrl: productsTable.imageUrl,
+        unit: productBatchesTable.unit,
+      })
+      .from(orderItemsTable)
+      .leftJoin(productBatchesTable, eq(orderItemsTable.batchId, productBatchesTable.id))
+      .leftJoin(productsTable, eq(productBatchesTable.productId, productsTable.id))
+      .where(eq(orderItemsTable.orderId, orderId));
+
+    // 3. Fetch Tracking Timeline
+    const timeline = await db
+      .select()
+      .from(orderTrackingTable)
+      .where(eq(orderTrackingTable.orderId, orderId))
+      .orderBy(asc(orderTrackingTable.createdAt));
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        orderId: orderData[0].id,
+        orderNumber: orderData[0].orderNumber,
+        status: orderData[0].status,
+        subtotal: orderData[0].subtotal,
+        totalTax: orderData[0].totalTax,
+        finalAmount: orderData[0].finalAmount,
+        deliveryAddress: orderData[0].deliveryAddress,
+        paymentType: orderData[0].paymentType,
+        createdAt: formatDateIST(orderData[0].createdAt),
+        expectedDeliveryDate: formatDateIST(orderData[0].expectedDeliveryDate),
+        receivedAt: formatDateIST(orderData[0].deliveredAt),
+        items: items.map(i => ({
+          productName: i.productName,
+          quantity: Number(i.quantity),
+          pricePerUnit: i.pricePerUnit,
+          totalItemPrice: i.totalItemPrice,
+          imageUrl: i.imageUrl,
+          unit: i.unit
+        })),
+        timeline: timeline.map(t => ({
+          id: t.id,
+          status: t.status,
+          message: t.message,
+          createdAt: formatDateIST(t.createdAt)
+        }))
+      }
+    });
+
+  } catch (error) {
+    console.error("Get User Order Detail Error:", error);
+    return res.status(500).json({ 
+      success: false, 
+      message: error.message || "Failed to retrieve order details." 
+    });
+  }
+};
+
 // GET SPECIFIC ORDER DETAIL (ADMIN)
 export const getAdminOrderDetail = async (req, res) => {
   try {
