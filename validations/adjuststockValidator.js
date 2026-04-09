@@ -14,4 +14,9 @@ export const adjustStockSchema = z.object({
     .trim()
     .min(3, "Remarks must be at least 3 characters")
     .max(255, "Remarks cannot exceed 255 characters"),
-});
+
+  transactionType: z
+    .enum(["restock", "sale", "return", "damaged", "adjustment"])
+    .optional()
+    .default("adjustment"),
+});

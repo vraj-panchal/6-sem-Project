@@ -1,5 +1,5 @@
 // controllers/productBatchController.js
-import { eq, and } from "drizzle-orm";
+import { eq, and, desc } from "drizzle-orm";
 import { db } from "../config/db.js";
 import { productsTable } from "../src/db/schema/product.js";
 import { productBatchesTable } from "../src/db/schema/productBatches.js";
@@ -379,7 +379,7 @@ export const adjustBatchStock = async (req, res) => {
       });
     }
 
-    const { newStock, remarks } = result.data;
+    const { newStock, remarks, transactionType } = result.data;
 
     await db.transaction(async (tx) => {
       //  Fetch batch
@@ -407,11 +407,10 @@ export const adjustBatchStock = async (req, res) => {
         .where(eq(productBatchesTable.id, Number(id)));
 
 
-      //  Insert transaction log
       await tx.insert(productTransactionsTable).values({
         batchId: Number(id),
-        transactionType: "adjustment",
-        quantity: difference, // positive or negative
+        transactionType: transactionType,
+        quantity: Math.abs(difference), // Ensure quantity logged is absolute, while newStock defines the change
         previousStock: previousStock,
         newStock: total,
         performedBy: req.admin?.id || null,
@@ -428,6 +427,40 @@ export const adjustBatchStock = async (req, res) => {
     });
 
   } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Server Error",
+    });
+  }
+};
+
+// GET BATCH TRANSACTIONS
+export const getBatchTransactions = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const transactions = await db
+      .select({
+        id: productTransactionsTable.id,
+        batchId: productTransactionsTable.batchId,
+        transactionType: productTransactionsTable.transactionType,
+        quantity: productTransactionsTable.quantity,
+        previousStock: productTransactionsTable.previousStock,
+        newStock: productTransactionsTable.newStock,
+        remarks: productTransactionsTable.remarks,
+        createdAt: productTransactionsTable.createdAt,
+      })
+      .from(productTransactionsTable)
+      .where(eq(productTransactionsTable.batchId, Number(id)))
+      .orderBy(desc(productTransactionsTable.createdAt));
+
+    return res.status(200).json({
+      success: true,
+      data: transactions,
+    });
+
+  } catch (error) {
+    console.error("Get Batch Transactions Error:", error);
     return res.status(500).json({
       success: false,
       message: error.message || "Server Error",

@@ -39,7 +39,8 @@ import {
   createProductBatch, 
   updateBatch, 
   deactivateBatch, 
-  adjustBatchStock 
+  adjustBatchStock,
+  getBatchTransactions
 } from "../controllers/productbatchController.js";
 import { 
   getAllOrdersForAdmin, 
@@ -100,6 +101,7 @@ router.post("/batches/add", isAdminLoggedIn, upload.none(), createProductBatch);
 router.put("/batches/update/:id", isAdminLoggedIn, upload.none(), updateBatch);
 router.put("/batches/deactivate/:id", isAdminLoggedIn, upload.none(), deactivateBatch);
 router.post("/batches/:id/adjuststock", isAdminLoggedIn, adjustBatchStock);
+router.get("/batches/:id/transactions", isAdminLoggedIn, getBatchTransactions);
 
 // Order Management
 router.get("/orders", isAdminLoggedIn, getAllOrdersForAdmin);

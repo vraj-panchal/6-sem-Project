@@ -993,3 +993,99 @@ export const getAdminOrderDetail = async (req, res) => {
     });
   }
 };
+
+// CANCEL CUSTOMER ORDER (USER API)
+export const cancelUserOrder = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { orderNumber } = req.params;
+
+    const result = await db.transaction(async (tx) => {
+      // 1. Fetch Order and Verify Ownership
+      const orderData = await tx
+        .select({ id: ordersTable.id, status: ordersTable.status })
+        .from(ordersTable)
+        .where(and(eq(ordersTable.orderNumber, orderNumber), eq(ordersTable.userId, userId)))
+        .limit(1);
+
+      if (orderData.length === 0) {
+        throw new Error("Order not found or access denied.");
+      }
+
+      const orderInfo = orderData[0];
+      const orderId = orderInfo.id;
+
+      // 2. State Check
+      if (orderInfo.status !== "pending" && orderInfo.status !== "approved") {
+        throw new Error(`Order cannot be cancelled because it is currently '${orderInfo.status}'.`);
+      }
+
+      // 3. Change Order Status to Cancelled
+      await tx
+        .update(ordersTable)
+        .set({ status: "cancelled", processedBy: userId })
+        .where(eq(ordersTable.id, orderId));
+
+      // 4. Fetch Order Items to Restock
+      const items = await tx
+        .select({
+          batchId: orderItemsTable.batchId,
+          quantity: orderItemsTable.quantity,
+          currentStock: productBatchesTable.currentStock,
+        })
+        .from(orderItemsTable)
+        .innerJoin(productBatchesTable, eq(orderItemsTable.batchId, productBatchesTable.id))
+        .where(eq(orderItemsTable.orderId, orderId));
+
+      // 5. Restock and Log Transactions
+      for (const item of items) {
+        const qtyReturned = Number(item.quantity) || 0;
+        const previousStock = Number(item.currentStock) || 0;
+        const newStock = previousStock + qtyReturned;
+
+        // Restock Database Batch
+        await tx
+          .update(productBatchesTable)
+          .set({ currentStock: String(newStock) })
+          .where(eq(productBatchesTable.id, item.batchId));
+
+        // Log Transaction
+        await tx.insert(productTransactionsTable).values({
+          batchId: item.batchId,
+          transactionType: "return",
+          quantity: qtyReturned,
+          previousStock: previousStock,
+          newStock: newStock,
+          performedBy: userId,
+          remarks: `Restocked after order cancellation: ${orderNumber}`,
+        });
+      }
+
+      // 6. Log Tracking Event
+      await addOrderTrackingEvent(
+        tx, 
+        orderId, 
+        "cancelled", 
+        "You have successfully cancelled this order."
+      );
+
+      return true;
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "Order has been cancelled successfully and stock has been restored.",
+      orderNumber: orderNumber
+    });
+
+  } catch (error) {
+    if (error.message.includes("Order not found") || error.message.includes("cannot be cancelled")) {
+      return res.status(400).json({ success: false, message: error.message });
+    }
+    console.error("Cancel User Order Error:", error);
+    return res.status(500).json({ 
+      success: false, 
+      message: "Failed to cancel the order. Please try again later."
+    });
+  }
+};
