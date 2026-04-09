@@ -508,7 +508,7 @@ export const getAssignedOrders = async (req, res) => {
 export const updateAssignmentStatus = async (req, res) => {
   try {
     const { id } = req.params; // assignmentId
-    const { status } = req.body;
+    const { status } = req.body || {};
     const employeeId = req.employee.id;
 
     const validStatuses = ["accepted", "in_progress", "completed"];
