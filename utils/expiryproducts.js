@@ -13,4 +13,18 @@ export async function deactivateExpiredBatches() {
         sql`${productBatchesTable.expiryDate} < CURRENT_DATE`
       )
     );
-}
+}
+
+export async function deactivateExpiredProduct() {
+  await db
+    .update(productsTable)
+    .set({ isActive: false })
+    .where(
+      sql`NOT EXISTS (
+        SELECT 1
+        FROM product_batches
+        WHERE product_batches.product_id = ${productsTable.id}
+        AND product_batches.is_active = true
+      )`
+    );
+}
