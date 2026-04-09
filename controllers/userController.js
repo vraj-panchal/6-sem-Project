@@ -60,68 +60,58 @@ export const registerUser = async (req, res) => {
       });
     }
 
-    //  bcrypt FLOW (UNCHANGED)
-    bcrypt.genSalt(10, function (err, salt) {
-      if (err) {
-        return res.status(500).json({ success: false, message: err.message });
-      }
+    // Hash password using promises for proper error handling
+    const salt = await bcrypt.genSalt(10);
+    const hash = await bcrypt.hash(password, salt);
 
-      bcrypt.hash(password, salt, async function (err, hash) {
-        if (err) {
-          return res.status(500).json({ success: false, message: err.message });
-        }
+    // Insert user
+    await db.insert(userTable).values({
+      username,
+      email,
+      phonenumber,
+      profile_image: image,
+      password: hash,
+      role_id: role[0].id,
+      status_id: status[0].id,
+    });
 
-        //  Insert user
-        await db.insert(userTable).values({
-          username,
-          email,
-          phonenumber,
-          profile_image: image,
-          password: hash,
-          role_id: role[0].id,
-          status_id: status[0].id,
-        });
+    // Fetch created user
+    const getCreatedUserRef = await db
+      .select()
+      .from(userTable)
+      .where(eq(userTable.email, email))
+      .limit(1);
 
-        // Fetch created user
-        const getCreatedUserRef = await db
-          .select()
-          .from(userTable)
-          .where(eq(userTable.email, email))
-          .limit(1);
+    const getCreatedUser = getCreatedUserRef[0];
 
-        const getCreatedUser = getCreatedUserRef[0];
+    // Generate token
+    const token = generateToken(getCreatedUser);
 
-        //  Generate token
-        const token = generateToken(getCreatedUser);
+    // Set cookie
+    res.cookie("token_ux", token, {
+      httpOnly: true,
+      secure: true, // Keep this true as Render provides HTTPS
+      sameSite: "none", // Keep this none for cross-origin
+      path: "/",
+      maxAge: 10 * 24 * 60 * 60 * 1000
+    });
 
-        //  Set cookie
-        res.cookie("token_ux", token, {
-          httpOnly: true,
-          secure: true, // Keep this true as Render provides HTTPS
-          sameSite: "none", // Keep this none for cross-origin
-          path: "/",
-          maxAge: 10 * 24 * 60 * 60 * 1000
-        });
+    // Send Welcome Email
+    sendWelcomeEmail(email, username).catch(console.error);
 
-        // Send Welcome Email
-        // await sendWelcomeEmail(email, username);
-
-        sendWelcomeEmail(email, username).catch(console.error);
-
-        return res.status(201).json({
-          success: true,
-          message: "User Registered Successfully",
-          data: {
-            id: getCreatedUser.id,
-            username: getCreatedUser.username,
-            email: getCreatedUser.email,
-            role_id: getCreatedUser.role_id,
-          },
-        });
-      });
+    return res.status(201).json({
+      success: true,
+      message: "User Registered Successfully",
+      data: {
+        id: getCreatedUser.id,
+        username: getCreatedUser.username,
+        email: getCreatedUser.email,
+        role_id: getCreatedUser.role_id,
+      },
     });
 
   } catch (err) {
+    console.error("RegisterUser Error:", err);
     return res.status(500).json({
       success: false,
       message: err.message,
@@ -162,39 +152,36 @@ export const loginUser = async (req, res) => {
 
     const Userpass = user[0];
 
-    bcrypt.compare(password, Userpass.password, async function (err, isMatch) {
-      if (err) {
-        return res.status(500).json({ success: false, message: err.message });
-      }
+    const isMatch = await bcrypt.compare(password, Userpass.password);
 
-      if (!isMatch) {
-        return res.status(401).json({
-          success: false,
-          message: "Email or Password Incorrect",
-        });
-      }
-
-      const otp = Math.floor(100000 + Math.random() * 900000).toString();
-      
-      const salt = await bcrypt.genSalt(10);
-      const hashedOtp = await bcrypt.hash(otp, salt);
-
-      const tempToken = jwt.sign(
-        { id: Userpass.id, email: Userpass.email, role_id: Userpass.role_id, otp: hashedOtp },
-        process.env.JWT_KEY || "fallback_secret",
-        { expiresIn: "10m" }
-      );
-
-      sendLoginOTPEmail(Userpass.email, otp, Userpass.username).catch(console.error);
-
-      return res.status(200).json({
-        success: true,
-        message: "OTP sent to email. Please verify to complete login.",
-        tempToken: tempToken
+    if (!isMatch) {
+      return res.status(401).json({
+        success: false,
+        message: "Email or Password Incorrect",
       });
+    }
+
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    
+    const salt = await bcrypt.genSalt(10);
+    const hashedOtp = await bcrypt.hash(otp, salt);
+
+    const tempToken = jwt.sign(
+      { id: Userpass.id, email: Userpass.email, role_id: Userpass.role_id, otp: hashedOtp },
+      process.env.JWT_KEY || "fallback_secret",
+      { expiresIn: "10m" }
+    );
+
+    sendLoginOTPEmail(Userpass.email, otp, Userpass.username).catch(console.error);
+
+    return res.status(200).json({
+      success: true,
+      message: "OTP sent to email. Please verify to complete login.",
+      tempToken: tempToken
     });
 
   } catch (err) {
+    console.error("LoginUser Error:", err);
     return res.status(500).json({
       success: false,
       message: err.message,
