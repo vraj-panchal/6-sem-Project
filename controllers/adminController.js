@@ -56,11 +56,14 @@ export const getAdminProfileByUsername = async (req, res) => {
 // --------------------- UPDATE PROFILE IMAGE ---------------------
 export const updateProfileImage = async (req, res) => {
   try {
-    const adminId = req.admin.id; // Corrected from req.user.id
+    const adminId = req.admin.id;
     const newImage = req.file ? req.file.path : null;
 
     if (!newImage) {
-      return res.status(400).json({ success: false, message: "No image uploaded" });
+      return res.status(400).json({ 
+        success: false, 
+        message: "No image uploaded. Please ensure you are using 'profile_image' as the key in form-data." 
+      });
     }
 
     await db
@@ -70,10 +73,11 @@ export const updateProfileImage = async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      message: "Profile image updated!",
+      message: "Profile image updated successfully!",
       imageUrl: newImage
     });
   } catch (err) {
+    console.error("Admin UpdateProfileImage Error:", err);
     return res.status(500).json({ success: false, message: err.message });
   }
 };
