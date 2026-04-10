@@ -11,7 +11,8 @@ import {
   getEmployeeProfileByUsername,
   getAssignedOrders,
   updateAssignmentStatus,
-  getAssignmentDetails
+  getAssignmentDetails,
+  getEmployeeProfile
 } from "../controllers/employeeController.js";
 
 import { isAdminLoggedIn } from "../middlewares/isAdminLoggedIn.js";
@@ -44,6 +45,7 @@ router.get("/dashboard", isEmployeeLoggedIn, (req, res) => {
     employee: req.employee,
   });
 });
+router.get("/profile", isEmployeeLoggedIn, getEmployeeProfile);
 router.put("/profile/update-image", isEmployeeLoggedIn, employeeImageUpload.single("profile_image"), updateProfileImage);
 router.get("/public/:username", getEmployeeProfileByUsername);
 

@@ -707,3 +707,11 @@ export const getAssignmentDetails = async (req, res) => {
   }
 };
 
+// GET EMPLOYEE PROFILE
+export const getEmployeeProfile = async (req, res) => {
+  res.status(200).json({
+    success: true,
+    data: req.employee,
+  });
+};
+

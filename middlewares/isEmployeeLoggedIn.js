@@ -27,6 +27,8 @@ export const isEmployeeLoggedIn = async (req, res, next) => {
         email: userTable.email,
         role_name: rolesTable.name,
         status_name: user_status.name,
+        phonenumber: userTable.phonenumber,
+        profile_image: userTable.profile_image,
       })
       .from(userTable)
       .innerJoin(rolesTable, eq(userTable.role_id, rolesTable.id))
@@ -57,7 +59,15 @@ export const isEmployeeLoggedIn = async (req, res, next) => {
       });
     }
 
-    req.employee = employee;
+    req.employee = {
+      id: employee.id,
+      username: employee.username,
+      email: employee.email,
+      role: employee.role_name,
+      status: employee.status_name,
+      phonenumber: employee.phonenumber,
+      profile_image: employee.profile_image,
+    };
     next();
   } catch (err) {
     return res.status(401).json({
