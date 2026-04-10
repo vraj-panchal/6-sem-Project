@@ -212,8 +212,8 @@ export const checkoutCOD = async (req, res) => {
 
     sendOrderInvoiceEmail(userEmail, deliveryName, invoiceData).catch(err => console.error("Invoice Email Error:", err));
 
-    return res.status(200).json({ 
-      success: true, 
+    return res.status(200).json({
+      success: true,
       message: "Order placed successfully! (Cash On Delivery)",
       expectedDelivery: formatDateIST(dbOrder[0].expectedDeliveryDate),
       orderNumber: dbOrder[0].orderNumber
@@ -221,9 +221,9 @@ export const checkoutCOD = async (req, res) => {
 
   } catch (error) {
     console.error("Checkout Error:", error);
-    return res.status(500).json({ 
-      success: false, 
-      message: error.message || "Failed to place order. Please try again." 
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Failed to place order. Please try again."
     });
   }
 };
@@ -263,9 +263,9 @@ export const getSavedAddress = async (req, res) => {
 
   } catch (error) {
     console.error("Get Saved Address Error:", error);
-    return res.status(500).json({ 
-      success: false, 
-      message: error.message || "Failed to retrieve saved address." 
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Failed to retrieve saved address."
     });
   }
 };
@@ -340,11 +340,11 @@ export const placeDirectOrder = async (req, res) => {
     const pricePerUnit = Number(itemData.basePrice) - Number(itemData.discount);
     const totalItemPrice = pricePerUnit * Number(quantity);
     const taxPercentage = Number(itemData.cgst) + Number(itemData.sgst) + Number(itemData.igst);
-      
+
     // Tax Extraction from Inclusive Price
     const itemTax = totalItemPrice * (taxPercentage / (100 + taxPercentage));
     const totalTax = itemTax;
-    const finalAmount = totalItemPrice; 
+    const finalAmount = totalItemPrice;
     const preTaxSubtotal = finalAmount - totalTax;
 
     // Full delivery address string for the order record
@@ -462,9 +462,9 @@ export const placeDirectOrder = async (req, res) => {
 
   } catch (error) {
     console.error("Direct Order Error:", error);
-    return res.status(500).json({ 
-      success: false, 
-      message: error.message || "Failed to place direct order. Please check stock and try again." 
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Failed to place direct order. Please check stock and try again."
     });
   }
 };
@@ -509,7 +509,7 @@ export const getMyOrders = async (req, res) => {
           .leftJoin(productsTable, eq(productBatchesTable.productId, productsTable.id))
           .where(eq(orderItemsTable.orderId, order.orderId));
 
-        return { 
+        return {
           orderId: order.orderId,
           orderNumber: order.orderNumber,
           status: order.status,
@@ -521,7 +521,7 @@ export const getMyOrders = async (req, res) => {
           expectedDeliveryDate: formatDateIST(order.expectedDeliveryDate),
           receivedAt: formatDateIST(order.deliveredAt),
           createdAt: formatDateIST(order.createdAt),
-          items: items 
+          items: items
         };
       })
     );
@@ -533,9 +533,9 @@ export const getMyOrders = async (req, res) => {
 
   } catch (error) {
     console.error("Get Orders Error:", error);
-    return res.status(500).json({ 
-      success: false, 
-      message: error.message || "Failed to fetch order history." 
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Failed to fetch order history."
     });
   }
 };
@@ -608,9 +608,9 @@ export const getAllOrdersForAdmin = async (req, res) => {
     });
   } catch (error) {
     console.error("Get All Orders (Admin) Error:", error);
-    return res.status(500).json({ 
-      success: false, 
-      message: error.message || "Failed to retrieve orders for admin." 
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Failed to retrieve orders for admin."
     });
   }
 };
@@ -635,7 +635,7 @@ export const updateOrderStatus = async (req, res) => {
     // If Admin marks as completed, set the timestamp
     if (status === "completed") {
       const now = new Date();
-      now.setHours(13, 30, 0, 0); 
+      now.setHours(13, 30, 0, 0);
       updateData.deliveredAt = now;
     }
 
@@ -671,9 +671,9 @@ export const updateOrderStatus = async (req, res) => {
     });
   } catch (error) {
     console.error("Update Order Status Error:", error);
-    return res.status(500).json({ 
-      success: false, 
-      message: error.message || "Failed to update order status." 
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Failed to update order status."
     });
   }
 };
@@ -709,7 +709,7 @@ export const assignOrderToEmployee = async (req, res) => {
       // Update the main order's processedBy field
       const updatedOrder = await tx
         .update(ordersTable)
-        .set({ 
+        .set({
           processedBy: Number(employeeId)
           // status: "accepted" // REMOVED: Status will now only change when the employee accepts
         })
@@ -758,9 +758,9 @@ export const assignOrderToEmployee = async (req, res) => {
       return res.status(404).json({ success: false, message: error.message });
     }
     console.error("Assign Order Error:", error);
-    return res.status(500).json({ 
-      success: false, 
-      message: error.message || "Failed to assign order to employee." 
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Failed to assign order to employee."
     });
   }
 };
@@ -800,9 +800,9 @@ export const trackOrder = async (req, res) => {
     });
   } catch (error) {
     console.error("Track Order Error:", error);
-    return res.status(500).json({ 
-      success: false, 
-      message: error.message || "Failed to fetch tracking timeline." 
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Failed to fetch tracking timeline."
     });
   }
 };
@@ -893,9 +893,9 @@ export const getUserOrderDetail = async (req, res) => {
 
   } catch (error) {
     console.error("Get User Order Detail Error:", error);
-    return res.status(500).json({ 
-      success: false, 
-      message: error.message || "Failed to retrieve order details." 
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Failed to retrieve order details."
     });
   }
 };
@@ -1006,9 +1006,9 @@ export const getAdminOrderDetail = async (req, res) => {
 
   } catch (error) {
     console.error("Get Order Detail Error:", error);
-    return res.status(500).json({ 
-      success: false, 
-      message: error.message || "Failed to retrieve order details." 
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Failed to retrieve order details."
     });
   }
 };
@@ -1088,9 +1088,9 @@ export const cancelUserOrder = async (req, res) => {
 
       // 6. Log Tracking Event
       await addOrderTrackingEvent(
-        tx, 
-        orderId, 
-        "cancelled", 
+        tx,
+        orderId,
+        "cancelled",
         "You have successfully cancelled this order."
       );
 
@@ -1108,8 +1108,8 @@ export const cancelUserOrder = async (req, res) => {
       return res.status(400).json({ success: false, message: error.message });
     }
     console.error("Cancel User Order Error:", error);
-    return res.status(500).json({ 
-      success: false, 
+    return res.status(500).json({
+      success: false,
       message: "Failed to cancel the order. Please try again later."
     });
   }
