@@ -1376,7 +1376,7 @@ export const getReturnDetails = async (req, res) => {
 // ADMIN COMPLETE RETURN
 export const adminCompleteReturn = async (req, res) => {
   try {
-    const adminId = req.user.id;
+    const adminId = req.admin.id;
     const { id } = req.params; // Return Order ID
 
     // 1. Fetch return order
@@ -1473,7 +1473,7 @@ export const adminCompleteReturn = async (req, res) => {
 // ADMIN ACCEPT RETURN
 export const adminAcceptReturn = async (req, res) => {
   try {
-    const adminId = req.user.id;
+    const adminId = req.admin.id;
     const { id } = req.params;
 
     const returnOrderRef = await db
@@ -1525,7 +1525,7 @@ export const adminAcceptReturn = async (req, res) => {
 // ADMIN REJECT RETURN
 export const adminRejectReturn = async (req, res) => {
   try {
-    const adminId = req.user.id;
+    const adminId = req.admin.id;
     const { id } = req.params;
 
     const returnOrderRef = await db
