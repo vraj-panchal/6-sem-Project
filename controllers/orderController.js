@@ -743,7 +743,7 @@ export const assignOrderToEmployee = async (req, res) => {
         .returning();
 
       // Log Tracking Milestone: "Assigned to Employee"
-      await addOrderTrackingEvent(tx, Number(id), "approved", `Order assigned to our delivery partner for processing.`);
+      await addOrderTrackingEvent(tx, Number(id), "accepted", `Order assigned to our delivery partner for processing.`);
 
       return { order: updatedOrder[0], assignment: newAssignment[0] };
     });

@@ -9,6 +9,7 @@ import { cartTable, cartItemsTable } from "./cart.js";
 import { ordersTable, orderItemsTable, orderStatusEnum } from "./orders.js";
 import { orderAssignmentsTable, assignmentStatusEnum } from "./orderAssignments.js";
 import { orderTrackingTable } from "./orderTracking.js";
+import { returnOrdersTable, returnOrderItemsTable, returnStatusEnum } from "./returnOrders.js";
 
 export { 
     rolesTable, user_status, userTable, 
@@ -17,5 +18,6 @@ export {
     cartTable, cartItemsTable,
     ordersTable, orderItemsTable, orderStatusEnum,
     orderAssignmentsTable, assignmentStatusEnum,
-    orderTrackingTable
+    orderTrackingTable,
+    returnOrdersTable, returnOrderItemsTable, returnStatusEnum
 };
