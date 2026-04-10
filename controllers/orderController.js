@@ -544,6 +544,18 @@ export const getMyOrders = async (req, res) => {
 export const getAllOrdersForAdmin = async (req, res) => {
   try {
     const employees = alias(userTable, "employees");
+
+    // Subquery to find the LATEST assignment ID for each order
+    // This prevents showing the same order multiple times when it is reassigned
+    const latestAssignmentSubquery = db
+      .select({
+        orderId: orderAssignmentsTable.orderId,
+        latestId: sql`MAX(${orderAssignmentsTable.id})`.as("latestId"),
+      })
+      .from(orderAssignmentsTable)
+      .groupBy(orderAssignmentsTable.orderId)
+      .as("latest_assignment_subquery");
+
     const orders = await db
       .select({
         orderId: ordersTable.id,
@@ -565,7 +577,10 @@ export const getAllOrdersForAdmin = async (req, res) => {
       })
       .from(ordersTable)
       .leftJoin(userTable, eq(ordersTable.userId, userTable.id))
-      .leftJoin(orderAssignmentsTable, eq(ordersTable.id, orderAssignmentsTable.orderId))
+      // Now we join with the subquery first to find the single latest assignment record
+      .leftJoin(latestAssignmentSubquery, eq(ordersTable.id, latestAssignmentSubquery.orderId))
+      // Then join with the actual assignment table using that specific latest ID
+      .leftJoin(orderAssignmentsTable, eq(latestAssignmentSubquery.latestId, orderAssignmentsTable.id))
       .leftJoin(employees, eq(orderAssignmentsTable.employeeId, employees.id))
       .orderBy(desc(ordersTable.createdAt));
 
