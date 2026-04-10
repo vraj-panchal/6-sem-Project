@@ -317,30 +317,34 @@ export const getEmployeeProfileByUsername = async (req, res) => {
 };
 
 // ================= UPDATE PROFILE IMAGE =================
-const employeeId = req.employee.id;
-const newImage = req.file ? req.file.path : null;
+export const updateProfileImage = async (req, res) => {
+  try {
+    const employeeId = req.employee.id;
+    const newImage = req.file ? req.file.path : null;
 
-if (!newImage) {
-  return res.status(400).json({
-    success: false,
-    message: "No image uploaded. Please ensure you are using 'profile_image' as the key in form-data."
-  });
-}
+    if (!newImage) {
+      return res.status(400).json({
+        success: false,
+        message: "No image uploaded. Please ensure you are using 'profile_image' as the key in form-data."
+      });
+    }
 
-await db
-  .update(userTable)
-  .set({ profile_image: newImage })
-  .where(eq(userTable.id, employeeId));
+    await db
+      .update(userTable)
+      .set({ profile_image: newImage })
+      .where(eq(userTable.id, employeeId));
 
-return res.status(200).json({
-  success: true,
-  message: "Profile image updated successfully!",
-  imageUrl: newImage
-});
-   catch (err) {
-  console.error("Employee UpdateProfileImage Error:", err);
-  return res.status(500).json({ success: false, message: err.message });
-}
+    return res.status(200).json({
+      success: true,
+      message: "Profile image updated successfully!",
+      imageUrl: newImage
+    });
+  } catch (err) {
+    console.error("Employee UpdateProfileImage Error:", err);
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
 
 // ================= FORGOT PASSWORD (STEP 1: SEND OTP) =================
 export const forgotPassword = async (req, res) => {
