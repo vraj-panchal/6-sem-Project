@@ -701,8 +701,3 @@ export const getAssignmentDetails = async (req, res) => {
     });
   }
 };
-
-      message: err.message || "Internal server error" 
-    });
-  }
-};
