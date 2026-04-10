@@ -107,6 +107,8 @@ export const isAdminLoggedIn = async (req, res, next) => {
         email: userTable.email,
         role_name: rolesTable.name,
         status_name: user_status.name,
+        phonenumber: userTable.phonenumber,
+        profile_image: userTable.profile_image,
       })
       .from(userTable)
       .innerJoin(rolesTable, eq(userTable.role_id, rolesTable.id))
@@ -143,6 +145,7 @@ export const isAdminLoggedIn = async (req, res, next) => {
       email: admin.email,
       role: admin.role_name,
       status: admin.status_name,
+      phonenumber: admin.phonenumber,
       profile_image: admin.profile_image
     };
     next();
