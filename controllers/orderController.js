@@ -1466,6 +1466,104 @@ export const adminCompleteReturn = async (req, res) => {
   }
 };
 
+// ADMIN ACCEPT RETURN
+export const adminAcceptReturn = async (req, res) => {
+  try {
+    const adminId = req.user.id;
+    const { id } = req.params;
+
+    const returnOrderRef = await db
+      .select()
+      .from(returnOrdersTable)
+      .where(eq(returnOrdersTable.id, Number(id)))
+      .limit(1);
+
+    if (!returnOrderRef.length) {
+      return res.status(404).json({ success: false, message: "Return order not found" });
+    }
+
+    const returnOrder = returnOrderRef[0];
+
+    if (returnOrder.status !== "pending") {
+      return res.status(400).json({ success: false, message: `Cannot accept: current status is ${returnOrder.status}` });
+    }
+
+    await db.transaction(async (tx) => {
+      // 1. Update Return Order status to "accepted"
+      await tx
+        .update(returnOrdersTable)
+        .set({ status: "accepted", processedBy: adminId, updatedAt: new Date() })
+        .where(eq(returnOrdersTable.id, returnOrder.id));
+
+      // 2. Update Main Order status to "returned" (Per User Request)
+      await tx
+        .update(ordersTable)
+        .set({ status: "returned" })
+        .where(eq(ordersTable.id, returnOrder.orderId));
+
+      // 3. Log tracking event on main order
+      await tx.insert(orderTrackingTable).values({
+        orderId: returnOrder.orderId,
+        status: "returned",
+        message: "Return request accepted by Admin. Main order marked as 'returned'."
+      });
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "Return request accepted. Original order status updated to 'returned'."
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// ADMIN REJECT RETURN
+export const adminRejectReturn = async (req, res) => {
+  try {
+    const adminId = req.user.id;
+    const { id } = req.params;
+
+    const returnOrderRef = await db
+      .select()
+      .from(returnOrdersTable)
+      .where(eq(returnOrdersTable.id, Number(id)))
+      .limit(1);
+
+    if (!returnOrderRef.length) {
+      return res.status(404).json({ success: false, message: "Return order not found" });
+    }
+
+    const returnOrder = returnOrderRef[0];
+
+    if (returnOrder.status !== "pending") {
+      return res.status(400).json({ success: false, message: `Cannot reject: current status is ${returnOrder.status}` });
+    }
+
+    await db.transaction(async (tx) => {
+      // 1. Update Return Order status to "rejected"
+      await tx
+        .update(returnOrdersTable)
+        .set({ status: "rejected", processedBy: adminId, updatedAt: new Date() })
+        .where(eq(returnOrdersTable.id, returnOrder.id));
+
+      // 2. Log tracking event on main order
+      await tx.insert(orderTrackingTable).values({
+        orderId: returnOrder.orderId,
+        status: "shipped", // Keep it at its last valid state in tracking
+        message: "Return request has been rejected by the Admin."
+      });
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "Return request has been rejected."
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
 // GET MY RETURNS (USER)
 export const getMyReturns = async (req, res) => {
   try {
