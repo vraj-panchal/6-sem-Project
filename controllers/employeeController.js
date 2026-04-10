@@ -550,7 +550,7 @@ export const updateAssignmentStatus = async (req, res) => {
       let assignmentStatus = status; // Default is what the user sent
 
       if (status === "accepted") {
-        mainOrderStatus = "approved";
+        mainOrderStatus = "accepted";
         milestoneMessage = "Your delivery partner has accepted the order and is preparing for delivery.";
       } 
       else if (status === "packed") {

@@ -3,7 +3,7 @@ import { userTable } from "./users.js";
 import { productBatchesTable } from "./productBatches.js";
 
 export const orderStatusEnum = pgEnum("order_status", [
-  "pending", "approved", "packed", "shipped", "delivered", "cancelled", "returned"
+  "pending", "approved", "accepted", "packed", "shipped", "delivered", "cancelled", "returned"
 ]);
 
 export const ordersTable = pgTable("orders", {
