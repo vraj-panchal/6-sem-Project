@@ -10,7 +10,7 @@ import { orderTrackingTable } from "../src/db/schema/orderTracking.js";
 import { productBatchesTable } from "../src/db/schema/productBatches.js";
 import { productTransactionsTable } from "../src/db/schema/productTransactions.js";
 import { returnOrdersTable, returnOrderItemsTable } from "../src/db/schema/returnOrders.js";
-import { formatDateIST, getISTDateNoon } from "../utils/dateFormatter.js";
+import { formatDateIST, getISTDateNoon, calculateExpectedDate } from "../utils/dateFormatter.js";
 import {
   employeeRegistrationSchema,
   employeeLoginSchema,
@@ -18,7 +18,6 @@ import {
 } from "../validations/employeeValidator.js";
 import { forgotPasswordSchema } from "../validations/userValidator.js";
 import { generateToken } from "../utils/generateTokens.js";
-import { formatDateIST, calculateExpectedDate } from "../utils/dateFormatter.js";
 import { sendEmployeeRegistrationEmail, sendLoginOTPEmail, sendPasswordResetOTPEmail } from "../utils/mailer.js";
 import jwt from "jsonwebtoken";
 
