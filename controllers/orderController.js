@@ -1030,8 +1030,8 @@ export const cancelUserOrder = async (req, res) => {
       const orderInfo = orderData[0];
       const orderId = orderInfo.id;
 
-      // 2. State Check (Restrict to 'pending' only as requested)
-      if (orderInfo.status !== "pending") {
+      // 2. State Check (Allow both pending and approved)
+      if (orderInfo.status !== "pending" && orderInfo.status !== "approved") {
         throw new Error(`Order cannot be cancelled because it is currently '${orderInfo.status}'.`);
       }
 
@@ -1040,6 +1040,12 @@ export const cancelUserOrder = async (req, res) => {
         .update(ordersTable)
         .set({ status: "cancelled", processedBy: userId })
         .where(eq(ordersTable.id, orderId));
+
+      // 3b. Clear any employee assignments (Remove from employee dashboard)
+      await tx
+        .update(orderAssignmentsTable)
+        .set({ status: "reassigned" })
+        .where(eq(orderAssignmentsTable.orderId, orderId));
 
       // 4. Fetch Order Items to Restock
       const items = await tx
