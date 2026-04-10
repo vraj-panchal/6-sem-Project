@@ -555,12 +555,12 @@ export const updateAssignmentStatus = async (req, res) => {
       } 
       else if (status === "packed") {
         mainOrderStatus = "packed";
-        assignmentStatus = "accepted"; // Assignment is still in 'accepted' phase
+        assignmentStatus = "packed"; 
         milestoneMessage = "Your order has been packed and is ready for shipping.";
       } 
       else if (status === "shipped") {
         mainOrderStatus = "shipped";
-        assignmentStatus = "in_progress"; // Now it is physically moving
+        assignmentStatus = "shipped"; 
         milestoneMessage = "Your order is out for delivery! Our partner is on the way.";
       } 
       else if (status === "completed") {

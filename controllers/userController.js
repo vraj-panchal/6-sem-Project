@@ -162,7 +162,7 @@ export const loginUser = async (req, res) => {
     }
 
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    
+
     const salt = await bcrypt.genSalt(10);
     const hashedOtp = await bcrypt.hash(otp, salt);
 
@@ -216,9 +216,9 @@ export const verifyUserOTP = async (req, res) => {
     // 🔒 SECURITY CHECK: Ensure this temporary token actually belongs to a User
     const role = await db.select().from(rolesTable).where(eq(rolesTable.id, decoded.role_id)).limit(1);
     if (!role.length || role[0].name !== "user") {
-      return res.status(403).json({ 
-        success: false, 
-        message: "Security Error: You are trying to verify an Admin/Employee login through the User portal!" 
+      return res.status(403).json({
+        success: false,
+        message: "Security Error: You are trying to verify an Admin/Employee login through the User portal!"
       });
     }
 
@@ -555,9 +555,9 @@ export const verifyPasswordResetOTP = async (req, res) => {
     // SECURITY CHECK: Ensure this temporary token belongs to a User
     const role = await db.select().from(rolesTable).where(eq(rolesTable.id, decoded.role_id)).limit(1);
     if (!role.length || role[0].name !== "user") {
-      return res.status(403).json({ 
-        success: false, 
-        message: "Security Error: Role mismatch!" 
+      return res.status(403).json({
+        success: false,
+        message: "Security Error: Role mismatch!"
       });
     }
 

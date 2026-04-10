@@ -3,7 +3,7 @@ import { ordersTable } from "./orders.js";
 import { userTable } from "./users.js";
 
 export const assignmentStatusEnum = pgEnum("assignment_status", [
-  "assigned", "accepted", "in_progress", "completed", "reassigned"
+  "assigned", "accepted", "packed", "shipped", "in_progress", "completed", "reassigned"
 ]);
 
 export const orderAssignmentsTable = pgTable("order_assignments", {
