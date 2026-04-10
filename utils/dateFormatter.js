@@ -31,3 +31,13 @@ export const calculateExpectedDate = (baseDate, days = 4) => {
   
   return target;
 };
+
+/**
+ * Returns a Date object set to 12:00 PM IST (Noon).
+ * UTC 06:30 AM = IST 12:00 PM.
+ */
+export const getISTDateNoon = () => {
+  const date = new Date();
+  date.setUTCHours(6, 30, 0, 0);
+  return date;
+};

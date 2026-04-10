@@ -10,6 +10,7 @@ import { orderTrackingTable } from "../src/db/schema/orderTracking.js";
 import { productBatchesTable } from "../src/db/schema/productBatches.js";
 import { productTransactionsTable } from "../src/db/schema/productTransactions.js";
 import { returnOrdersTable, returnOrderItemsTable } from "../src/db/schema/returnOrders.js";
+import { formatDateIST, getISTDateNoon } from "../utils/dateFormatter.js";
 import {
   employeeRegistrationSchema,
   employeeLoginSchema,
@@ -585,9 +586,7 @@ export const updateAssignmentStatus = async (req, res) => {
       // 4. Update main orders table
       const orderUpdateData = { status: mainOrderStatus };
       if (mainOrderStatus === "completed") {
-        const deliveryTime = new Date();
-        deliveryTime.setHours(13, 30, 0, 0);
-        orderUpdateData.deliveredAt = deliveryTime;
+        orderUpdateData.deliveredAt = getISTDateNoon();
       }
 
       await tx

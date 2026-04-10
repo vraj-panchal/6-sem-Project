@@ -12,7 +12,7 @@ import { orderTrackingTable } from "../src/db/schema/orderTracking.js";
 import { productTransactionsTable } from "../src/db/schema/productTransactions.js";
 import { returnOrdersTable, returnOrderItemsTable } from "../src/db/schema/returnOrders.js";
 
-import { formatDateIST, calculateExpectedDate } from "../utils/dateFormatter.js";
+import { formatDateIST, calculateExpectedDate, getISTDateNoon } from "../utils/dateFormatter.js";
 import { sendOrderInvoiceEmail } from "../utils/mailer.js";
 
 // HELPER: Generate a custom Order Number (e.g., ORD-240405-X9B)
@@ -629,14 +629,13 @@ export const updateOrderStatus = async (req, res) => {
 
     const updateData = {
       status: status,
-      processedBy: adminId
+      processedBy: adminId,
+      updatedAt: getISTDateNoon()
     };
 
     // If Admin marks as completed, set the timestamp
     if (status === "completed") {
-      const now = new Date();
-      now.setHours(13, 30, 0, 0);
-      updateData.deliveredAt = now;
+      updateData.deliveredAt = getISTDateNoon();
     }
 
     const updatedOrder = await db
@@ -1439,13 +1438,13 @@ export const adminCompleteReturn = async (req, res) => {
       // B. Update Return Order status
       await tx
         .update(returnOrdersTable)
-        .set({ status: "completed", processedBy: adminId, updatedAt: new Date() })
+        .set({ status: "completed", processedBy: adminId, updatedAt: getISTDateNoon() })
         .where(eq(returnOrdersTable.id, returnOrder.id));
 
       // C. Update Main Order status to "returned"
       await tx
         .update(ordersTable)
-        .set({ status: "returned" })
+        .set({ status: "returned", updatedAt: getISTDateNoon() })
         .where(eq(ordersTable.id, returnOrder.orderId));
 
       // D. Log tracking event on main order
@@ -1496,13 +1495,13 @@ export const adminAcceptReturn = async (req, res) => {
       // 1. Update Return Order status to "accepted"
       await tx
         .update(returnOrdersTable)
-        .set({ status: "accepted", processedBy: adminId, updatedAt: new Date() })
+        .set({ status: "accepted", processedBy: adminId, updatedAt: getISTDateNoon() })
         .where(eq(returnOrdersTable.id, returnOrder.id));
 
       // 2. Update Main Order status to "returned" (Per User Request)
       await tx
         .update(ordersTable)
-        .set({ status: "returned" })
+        .set({ status: "returned", updatedAt: getISTDateNoon() })
         .where(eq(ordersTable.id, returnOrder.orderId));
 
       // 3. Log tracking event on main order
@@ -1548,7 +1547,7 @@ export const adminRejectReturn = async (req, res) => {
       // 1. Update Return Order status to "rejected"
       await tx
         .update(returnOrdersTable)
-        .set({ status: "rejected", processedBy: adminId, updatedAt: new Date() })
+        .set({ status: "rejected", processedBy: adminId, updatedAt: getISTDateNoon() })
         .where(eq(returnOrdersTable.id, returnOrder.id));
 
       // 2. Log tracking event on main order
