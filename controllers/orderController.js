@@ -708,7 +708,10 @@ export const assignOrderToEmployee = async (req, res) => {
       // Update the main order's processedBy field
       const updatedOrder = await tx
         .update(ordersTable)
-        .set({ processedBy: Number(employeeId) })
+        .set({ 
+          processedBy: Number(employeeId),
+          status: "approved" // Automatically approve when assigning
+        })
         .where(eq(ordersTable.id, Number(id)))
         .returning();
 
