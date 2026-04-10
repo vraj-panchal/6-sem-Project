@@ -46,7 +46,9 @@ import {
   getAllOrdersForAdmin, 
   updateOrderStatus,
   assignOrderToEmployee,
-  getAdminOrderDetail
+  getAdminOrderDetail,
+  getReturnOrders,
+  getReturnOrderById
 } from "../controllers/orderController.js";
 
 dotenv.config();
@@ -108,5 +110,9 @@ router.get("/orders", isAdminLoggedIn, getAllOrdersForAdmin);
 router.get("/orders/:id", isAdminLoggedIn, getAdminOrderDetail);
 router.put("/orders/:id/status", isAdminLoggedIn, upload.none(), updateOrderStatus);
 router.put("/orders/:id/assign", isAdminLoggedIn, assignOrderToEmployee);
+
+// Return Management
+router.get("/returns", isAdminLoggedIn, getReturnOrders);
+router.get("/returns/:id", isAdminLoggedIn, getReturnOrderById);
 
 export default router;

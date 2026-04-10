@@ -10,6 +10,7 @@ import { orderAssignmentsTable } from "../src/db/schema/orderAssignments.js";
 import { rolesTable } from "../src/db/schema/roles.js";
 import { orderTrackingTable } from "../src/db/schema/orderTracking.js";
 import { productTransactionsTable } from "../src/db/schema/productTransactions.js";
+import { returnOrdersTable, returnOrderItemsTable } from "../src/db/schema/returnOrders.js";
 
 import { formatDateIST, calculateExpectedDate } from "../utils/dateFormatter.js";
 import { sendOrderInvoiceEmail } from "../utils/mailer.js";
@@ -1111,5 +1112,192 @@ export const cancelUserOrder = async (req, res) => {
       success: false, 
       message: "Failed to cancel the order. Please try again later."
     });
+  }
+};
+
+// SUBMIT RETURN ORDER
+export const submitReturnOrder = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { orderNumber, items, reason } = req.body; // items: [{ batchId, quantity }]
+
+    if (!items || !items.length) {
+      return res.status(400).json({ success: false, message: "No items selected for return" });
+    }
+
+    // 1. Fetch the original order
+    const orderRef = await db
+      .select()
+      .from(ordersTable)
+      .where(and(eq(ordersTable.orderNumber, orderNumber), eq(ordersTable.userId, userId)))
+      .limit(1);
+
+    if (!orderRef.length) {
+      return res.status(404).json({ success: false, message: "Order not found" });
+    }
+
+    const order = orderRef[0];
+
+    // 2. Security & Status Validation
+    if (order.status !== "delivered") {
+      return res.status(400).json({ success: false, message: "Only delivered orders can be returned" });
+    }
+
+    // 3. Process items in a transaction
+    const result = await db.transaction(async (tx) => {
+      let totalRefundAmount = 0;
+      const returnItemsData = [];
+
+      for (const item of items) {
+        // Find the specific item in the original order to check bought quantity and price
+        const originalItem = await tx
+          .select({
+            quantity: orderItemsTable.quantity,
+            pricePerUnit: orderItemsTable.pricePerUnit,
+            batchId: orderItemsTable.batchId,
+            expiryDate: productBatchesTable.expiryDate
+          })
+          .from(orderItemsTable)
+          .innerJoin(productBatchesTable, eq(orderItemsTable.batchId, productBatchesTable.id))
+          .where(and(eq(orderItemsTable.orderId, order.id), eq(orderItemsTable.batchId, item.batchId)))
+          .limit(1);
+
+        if (!originalItem.length) {
+          throw new Error(`Item with Batch ID ${item.batchId} not found in this order`);
+        }
+
+        const oi = originalItem[0];
+
+        // A. Quantity Check
+        if (Number(item.quantity) > Number(oi.quantity)) {
+          throw new Error(`Cannot return more than purchased quantity for item ${item.batchId}`);
+        }
+
+        // B. Expiry Check
+        if (oi.expiryDate) {
+          const expiryDate = new Date(oi.expiryDate);
+          const today = new Date();
+          if (today > expiryDate) {
+            throw new Error(`Item ${item.batchId} has expired and cannot be returned`);
+          }
+        }
+
+        const refundAmount = Number(item.quantity) * Number(oi.pricePerUnit);
+        totalRefundAmount += refundAmount;
+
+        returnItemsData.push({
+          batchId: item.batchId,
+          quantity: item.quantity,
+          refundAmount: refundAmount.toFixed(2)
+        });
+      }
+
+      // 4. Create the main Return Order record
+      const [newReturnOrder] = await tx.insert(returnOrdersTable).values({
+        orderId: order.id,
+        orderNumber: order.orderNumber, // Saved the unique order number
+        userId: userId,
+        totalRefundAmount: totalRefundAmount.toFixed(2),
+        reason: reason || "No reason provided",
+        status: "pending"
+      }).returning();
+
+      // 5. Create Return Item records
+      for (const rid of returnItemsData) {
+        await tx.insert(returnOrderItemsTable).values({
+          returnOrderId: newReturnOrder.id,
+          batchId: rid.batchId,
+          quantity: rid.quantity,
+          refundAmount: rid.refundAmount
+        });
+      }
+
+      // 6. Log a tracking event on the main order (Simple way requested)
+      await addOrderTrackingEvent(tx, order.id, "delivered", `Return request submitted for items: ${items.map(i => i.batchId).join(", ")}`);
+
+      return { returnOrderId: newReturnOrder.id, refund: totalRefundAmount.toFixed(2) };
+    });
+
+    return res.status(201).json({
+      success: true,
+      message: "Return request submitted successfully",
+      data: result
+    });
+
+  } catch (err) {
+    console.error("Return Request Error:", err.message);
+    return res.status(500).json({
+      success: false,
+      message: err.message || "Internal Server Error"
+    });
+  }
+};
+
+// GET ALL RETURN ORDERS (ADMIN)
+export const getReturnOrders = async (req, res) => {
+  try {
+    const returns = await db
+      .select({
+        id: returnOrdersTable.id,
+        orderNumber: ordersTable.orderNumber,
+        customerName: userTable.username,
+        totalRefund: returnOrdersTable.totalRefundAmount,
+        status: returnOrdersTable.status,
+        createdAt: returnOrdersTable.createdAt,
+        reason: returnOrdersTable.reason
+      })
+      .from(returnOrdersTable)
+      .innerJoin(ordersTable, eq(returnOrdersTable.orderId, ordersTable.id))
+      .innerJoin(userTable, eq(returnOrdersTable.userId, userTable.id))
+      .orderBy(desc(returnOrdersTable.createdAt));
+
+    return res.status(200).json({
+      success: true,
+      data: returns
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// GET RETURN ORDER DETAIL
+export const getReturnOrderById = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const returnOrder = await db
+      .select()
+      .from(returnOrdersTable)
+      .where(eq(returnOrdersTable.id, Number(id)))
+      .limit(1);
+
+    if (!returnOrder.length) {
+      return res.status(404).json({ success: false, message: "Return order not found" });
+    }
+
+    const items = await db
+      .select({
+        id: returnOrderItemsTable.id,
+        batchId: returnOrderItemsTable.batchId,
+        quantity: returnOrderItemsTable.quantity,
+        refundAmount: returnOrderItemsTable.refundAmount,
+        productName: orderItemsTable.productName
+      })
+      .from(returnOrderItemsTable)
+      .innerJoin(orderItemsTable, and(
+        eq(orderItemsTable.batchId, returnOrderItemsTable.batchId),
+        eq(orderItemsTable.orderId, returnOrder[0].orderId)
+      ))
+      .where(eq(returnOrderItemsTable.returnOrderId, Number(id)));
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        ...returnOrder[0],
+        items
+      }
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
   }
 };

@@ -7,6 +7,9 @@ import { user_status } from "../src/db/schema/user_status.js";
 import { ordersTable, orderItemsTable } from "../src/db/schema/orders.js";
 import { orderAssignmentsTable } from "../src/db/schema/orderAssignments.js";
 import { orderTrackingTable } from "../src/db/schema/orderTracking.js";
+import { productBatchesTable } from "../src/db/schema/productBatches.js";
+import { productTransactionsTable } from "../src/db/schema/productTransactions.js";
+import { returnOrdersTable, returnOrderItemsTable } from "../src/db/schema/returnOrders.js";
 import {
   employeeRegistrationSchema,
   employeeLoginSchema,
@@ -695,6 +698,103 @@ export const getAssignmentDetails = async (req, res) => {
     return res.status(500).json({ 
       success: false, 
       message: err.message || "Internal server error" 
+    });
+  }
+};
+
+// COMPLETE RETURN ORDER (EMPLOYEE)
+export const completeReturnOrder = async (req, res) => {
+  try {
+    const employeeId = req.user.id;
+    const { returnOrderId } = req.params;
+
+    // 1. Fetch return order
+    const returnOrderRef = await db
+      .select()
+      .from(returnOrdersTable)
+      .where(eq(returnOrdersTable.id, Number(returnOrderId)))
+      .limit(1);
+
+    if (!returnOrderRef.length) {
+      return res.status(404).json({ success: false, message: "Return order not found" });
+    }
+
+    const returnOrder = returnOrderRef[0];
+
+    if (returnOrder.status === "completed") {
+      return res.status(400).json({ success: false, message: "Return already completed" });
+    }
+
+    // 2. Perform restocking and status updates in a transaction
+    await db.transaction(async (tx) => {
+      // A. Fetch all items in this return
+      const items = await tx
+        .select()
+        .from(returnOrderItemsTable)
+        .where(eq(returnOrderItemsTable.returnOrderId, returnOrder.id));
+
+      for (const item of items) {
+        // i. Fetch current batch data
+        const batch = await tx
+          .select()
+          .from(productBatchesTable)
+          .where(eq(productBatchesTable.id, item.batchId))
+          .limit(1);
+
+        if (!batch.length) throw new Error(`Batch ${item.batchId} not found`);
+
+        const b = batch[0];
+        const oldStock = Number(b.currentStock || 0);
+        const newStock = oldStock + Number(item.quantity);
+
+        // ii. Update batch stock
+        await tx
+          .update(productBatchesTable)
+          .set({ currentStock: newStock.toString() })
+          .where(eq(productBatchesTable.id, item.batchId));
+
+        // iii. Log transaction
+        await tx.insert(productTransactionsTable).values({
+          batchId: item.batchId,
+          transactionType: "return",
+          quantity: Number(item.quantity),
+          previousStock: oldStock,
+          newStock: newStock,
+          performedBy: employeeId,
+          remarks: `Return from Order #${returnOrder.orderId}`
+        });
+      }
+
+      // B. Update Return Order status
+      await tx
+        .update(returnOrdersTable)
+        .set({ status: "completed", processedBy: employeeId, updatedAt: new Date() })
+        .where(eq(returnOrdersTable.id, returnOrder.id));
+
+      // C. Update Main Order status to "returned" (if partially returned, it still counts as returned)
+      await tx
+        .update(ordersTable)
+        .set({ status: "returned" })
+        .where(eq(ordersTable.id, returnOrder.orderId));
+
+      // D. Log tracking event on main order
+      await tx.insert(orderTrackingTable).values({
+        orderId: returnOrder.orderId,
+        status: "returned",
+        message: "Return pickup completed. Refund processed."
+      });
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "Return processed and stock updated successfully"
+    });
+
+  } catch (err) {
+    console.error("Complete Return Error:", err.message);
+    return res.status(500).json({
+      success: false,
+      message: err.message || "Internal Server Error"
     });
   }
 };
