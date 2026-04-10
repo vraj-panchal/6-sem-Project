@@ -469,6 +469,7 @@ export const getAssignedOrders = async (req, res) => {
         assignedAt: orderAssignmentsTable.assignedAt,
         orderId: ordersTable.id,
         orderNumber: ordersTable.orderNumber,
+        orderStatus: ordersTable.status, // Added main order status
         finalAmount: ordersTable.finalAmount,
         deliveryAddress: ordersTable.deliveryAddress,
       })
@@ -529,6 +530,19 @@ export const updateAssignmentStatus = async (req, res) => {
       }
 
       const orderId = assignment[0].orderId;
+
+      // --- ADDED SAFETY CHECK ---
+      // 1b. Verify the main order is not cancelled
+      const mainOrder = await tx
+        .select({ status: ordersTable.status })
+        .from(ordersTable)
+        .where(eq(ordersTable.id, orderId))
+        .limit(1);
+
+      if (mainOrder.length > 0 && mainOrder[0].status === "cancelled") {
+        throw new Error("Cannot update progress: This order has been cancelled by the customer.");
+      }
+      // ----------------------------
 
       // 2. Map the selection to both Assignment Status & Main Order Status
       let milestoneMessage = "";
@@ -613,6 +627,7 @@ export const getAssignmentDetails = async (req, res) => {
         orderId: orderAssignmentsTable.orderId,
         assignmentStatus: orderAssignmentsTable.status,
         orderNumber: ordersTable.orderNumber,
+        orderStatus: ordersTable.status, // Added main order status
         deliveryAddress: ordersTable.deliveryAddress,
         finalAmount: ordersTable.finalAmount,
         paymentType: ordersTable.paymentType,
@@ -655,6 +670,7 @@ export const getAssignmentDetails = async (req, res) => {
         orderId: assignment[0].orderId,
         assignmentStatus: assignment[0].assignmentStatus,
         orderNumber: assignment[0].orderNumber,
+        orderStatus: assignment[0].orderStatus, // Added main order status
         deliveryAddress: assignment[0].deliveryAddress,
         finalAmount: assignment[0].finalAmount,
         paymentType: assignment[0].paymentType,
