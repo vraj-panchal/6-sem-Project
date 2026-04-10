@@ -483,6 +483,8 @@ export const getAssignedOrders = async (req, res) => {
         or(
           eq(orderAssignmentsTable.status, "assigned"),
           eq(orderAssignmentsTable.status, "accepted"),
+          eq(orderAssignmentsTable.status, "packed"),
+          eq(orderAssignmentsTable.status, "shipped"),
           eq(orderAssignmentsTable.status, "in_progress")
         )
       ))
@@ -490,7 +492,9 @@ export const getAssignedOrders = async (req, res) => {
 
     // 2. Split into Notifications vs Active Tasks
     const notifications = allAssignments.filter(a => a.assignmentStatus === "assigned");
-    const activeTasks = allAssignments.filter(a => a.assignmentStatus === "accepted" || a.assignmentStatus === "in_progress");
+    const activeTasks = allAssignments.filter(a =>
+      ["accepted", "packed", "shipped", "in_progress"].includes(a.assignmentStatus)
+    );
 
     return res.status(200).json({
       success: true,
