@@ -224,9 +224,9 @@ export const verifyEmployeeOTP = async (req, res) => {
     // 🔒 SECURITY CHECK: Ensure this temporary token belongs to an Employee
     const role = await db.select().from(rolesTable).where(eq(rolesTable.id, decoded.role_id)).limit(1);
     if (!role.length || role[0].name !== "employee") {
-      return res.status(403).json({ 
-        success: false, 
-        message: "Security Error: You are trying to verify a User/Admin login through the Employee portal!" 
+      return res.status(403).json({
+        success: false,
+        message: "Security Error: You are trying to verify a User/Admin login through the Employee portal!"
       });
     }
 
@@ -274,12 +274,12 @@ export const logoutEmployee = async (req, res) => {
   // });
 
   res.cookie("token_ex", "", {
-  httpOnly: true,
-  secure: true, 
-  sameSite: "none",
-  path: "/", // 👈 Very important!
-  expires: new Date(0), 
-});
+    httpOnly: true,
+    secure: true,
+    sameSite: "none",
+    path: "/", // 👈 Very important!
+    expires: new Date(0),
+  });
 
   return res.status(200).json({
     success: true,
@@ -438,9 +438,9 @@ export const verifyEmployeePasswordResetOTP = async (req, res) => {
     // SECURITY CHECK: Ensure this temporary token belongs to an Employee
     const role = await db.select().from(rolesTable).where(eq(rolesTable.id, decoded.role_id)).limit(1);
     if (!role.length || role[0].name !== "employee") {
-      return res.status(403).json({ 
-        success: false, 
-        message: "Security Error: Role mismatch!" 
+      return res.status(403).json({
+        success: false,
+        message: "Security Error: Role mismatch!"
       });
     }
 
@@ -481,8 +481,8 @@ export const getAssignedOrders = async (req, res) => {
       .where(and(
         eq(orderAssignmentsTable.employeeId, employeeId),
         or(
-          eq(orderAssignmentsTable.status, "assigned"), 
-          eq(orderAssignmentsTable.status, "accepted"), 
+          eq(orderAssignmentsTable.status, "assigned"),
+          eq(orderAssignmentsTable.status, "accepted"),
           eq(orderAssignmentsTable.status, "in_progress")
         )
       ))
@@ -501,9 +501,9 @@ export const getAssignedOrders = async (req, res) => {
     });
   } catch (err) {
     console.error("Get Assigned Orders Error:", err);
-    return res.status(500).json({ 
-      success: false, 
-      message: err.message || "Internal server error" 
+    return res.status(500).json({
+      success: false,
+      message: err.message || "Internal server error"
     });
   }
 };
@@ -555,17 +555,17 @@ export const updateAssignmentStatus = async (req, res) => {
       if (status === "accepted") {
         mainOrderStatus = "accepted";
         milestoneMessage = "Your delivery partner has accepted the order and is preparing for delivery.";
-      } 
+      }
       else if (status === "packed") {
         mainOrderStatus = "packed";
-        assignmentStatus = "packed"; 
+        assignmentStatus = "packed";
         milestoneMessage = "Your order has been packed and is ready for shipping.";
-      } 
+      }
       else if (status === "shipped") {
         mainOrderStatus = "shipped";
-        assignmentStatus = "shipped"; 
+        assignmentStatus = "shipped";
         milestoneMessage = "Your order is out for delivery! Our partner is on the way.";
-      } 
+      }
       else if (status === "completed") {
         mainOrderStatus = "delivered";
         assignmentStatus = "completed";
@@ -583,7 +583,7 @@ export const updateAssignmentStatus = async (req, res) => {
       const orderUpdateData = { status: mainOrderStatus };
       if (mainOrderStatus === "delivered") {
         const deliveryTime = new Date();
-        deliveryTime.setHours(13, 30, 0, 0); 
+        deliveryTime.setHours(13, 30, 0, 0);
         orderUpdateData.deliveredAt = deliveryTime;
       }
 
@@ -612,9 +612,9 @@ export const updateAssignmentStatus = async (req, res) => {
       return res.status(404).json({ success: false, message: err.message });
     }
     console.error("Update Assignment Error:", err);
-    return res.status(500).json({ 
-      success: false, 
-      message: err.message || "Internal server error" 
+    return res.status(500).json({
+      success: false,
+      message: err.message || "Internal server error"
     });
   }
 };
@@ -695,9 +695,10 @@ export const getAssignmentDetails = async (req, res) => {
 
   } catch (err) {
     console.error("Get Assignment Details Error:", err);
-    return res.status(500).json({ 
-      success: false, 
-      message: err.message || "Internal server error" 
+    return res.status(500).json({
+      success: false,
+      message: err.message || "Internal server error"
     });
   }
 };
+
