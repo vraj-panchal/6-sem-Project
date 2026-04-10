@@ -1301,3 +1301,70 @@ export const getReturnOrderById = async (req, res) => {
     return res.status(500).json({ success: false, message: err.message });
   }
 };
+
+// GET RETURN DETAILS (FOR PRE-FILLING RETURN FORM)
+export const getReturnDetails = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { orderNumber } = req.params;
+
+    // 1. Fetch order
+    const orderRef = await db
+      .select()
+      .from(ordersTable)
+      .where(and(eq(ordersTable.orderNumber, orderNumber), eq(ordersTable.userId, userId)))
+      .limit(1);
+
+    if (!orderRef.length) {
+      return res.status(404).json({ success: false, message: "Order not found" });
+    }
+
+    const order = orderRef[0];
+
+    if (order.status !== "delivered") {
+      return res.status(400).json({ success: false, message: "Only delivered orders can be returned" });
+    }
+
+    // 2. Fetch Order Items joined with Batch Info for expiry
+    const items = await db
+      .select({
+        batchId: orderItemsTable.batchId,
+        productName: orderItemsTable.productName,
+        pricePerUnit: orderItemsTable.pricePerUnit,
+        boughtQuantity: orderItemsTable.quantity,
+        expiryDate: productBatchesTable.expiryDate
+      })
+      .from(orderItemsTable)
+      .innerJoin(productBatchesTable, eq(orderItemsTable.batchId, productBatchesTable.id))
+      .where(eq(orderItemsTable.orderId, order.id));
+
+    // 3. Map details and calculate return availability
+    const returnableItems = items.map(item => {
+      let isExpired = false;
+      if (item.expiryDate) {
+        isExpired = new Date() > new Date(item.expiryDate);
+      }
+
+      return {
+        batchId: item.batchId,
+        productName: item.productName,
+        pricePerUnit: item.pricePerUnit,
+        boughtQuantity: Number(item.boughtQuantity),
+        isReturnable: !isExpired,
+        expiryStatus: isExpired ? "Expired" : "Valid"
+      };
+    });
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        orderNumber: order.orderNumber,
+        orderId: order.id,
+        items: returnableItems
+      }
+    });
+
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};

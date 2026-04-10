@@ -24,7 +24,7 @@ import {
 import { isUserLoggedIn } from "../middlewares/isUserLoggedIn.js";
 import { userImageUpload } from "../middlewares/upload.js";
 import { addToCart, updateCartQuantity, removeFromCart, getCart } from "../controllers/cartController.js";
-import { placeDirectOrder, checkoutCOD, getMyOrders, getSavedAddress, trackOrder, getUserOrderDetail, cancelUserOrder, submitReturnOrder } from "../controllers/orderController.js";
+import { placeDirectOrder, checkoutCOD, getMyOrders, getSavedAddress, trackOrder, getUserOrderDetail, cancelUserOrder, submitReturnOrder, getReturnDetails } from "../controllers/orderController.js";
 import { listCategories } from "../controllers/categoriesController.js";
 
 dotenv.config();
@@ -72,6 +72,7 @@ router.get("/order/saved-address", isUserLoggedIn, getSavedAddress);
 router.post("/order/direct", isUserLoggedIn, placeDirectOrder);
 router.post("/order/checkout", isUserLoggedIn, checkoutCOD);
 router.get("/orders", isUserLoggedIn, getMyOrders);
+router.get("/orders/:orderNumber/return-details", isUserLoggedIn, getReturnDetails);
 router.get("/orders/:orderNumber", isUserLoggedIn, getUserOrderDetail);
 router.put("/orders/:orderNumber/cancel", isUserLoggedIn, cancelUserOrder);
 router.post("/orders/return", isUserLoggedIn, upload.none(), submitReturnOrder);
