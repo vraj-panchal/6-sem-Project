@@ -4,7 +4,7 @@ import { ordersTable } from "./orders.js";
 import { productBatchesTable } from "./productBatches.js";
 
 export const returnStatusEnum = pgEnum("return_status", [
-  "pending", "picked_up", "completed", "rejected"
+  "pending", "accepted", "picked_up", "completed", "rejected"
 ]);
 
 export const returnOrdersTable = pgTable("return_orders", {

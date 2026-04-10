@@ -451,7 +451,7 @@ export const placeDirectOrder = async (req, res) => {
         subtotal: preTaxSubtotal.toFixed(2),
         totalTax: totalTax.toFixed(2),
         finalAmount: finalAmount.toFixed(2),
-        status: "pending",
+        status: "accepted",
         paymentType: "COD",
         deliveryName,
         deliveryPhone,
@@ -622,7 +622,7 @@ export const updateOrderStatus = async (req, res) => {
     const { status } = req.body;
     const adminId = req.admin.id;
 
-    const validStatuses = ["pending", "approved", "accepted", "packed", "shipped", "delivered", "cancelled", "returned"];
+    const validStatuses = ["pending", "accepted", "packed", "shipped", "completed", "cancelled", "returned"];
     if (!validStatuses.includes(status)) {
       return res.status(400).json({ success: false, message: "Invalid order status" });
     }
@@ -632,10 +632,10 @@ export const updateOrderStatus = async (req, res) => {
       processedBy: adminId
     };
 
-    // If Admin marks as delivered, set the timestamp within business hours (9AM-4PM)
-    if (status === "delivered") {
+    // If Admin marks as completed, set the timestamp
+    if (status === "completed") {
       const now = new Date();
-      now.setHours(13, 30, 0, 0); // Set to 1:30 PM
+      now.setHours(13, 30, 0, 0); 
       updateData.deliveredAt = now;
     }
 
@@ -651,10 +651,10 @@ export const updateOrderStatus = async (req, res) => {
 
     // 1. Log Tracking milestone for status update
     const statusMessages = {
-      approved: "Your order has been approved and is being processed.",
+      accepted: "Your order has been accepted and is being processed.",
       packed: "Your order has been packed and is ready for shipment.",
       shipped: "Your order has been shipped and is on its way!",
-      delivered: "Your order has been delivered. Enjoy!",
+      completed: "Your order has been completed. Enjoy!",
       cancelled: "Your order has been cancelled.",
       returned: "Your order has been returned."
     };
@@ -711,7 +711,7 @@ export const assignOrderToEmployee = async (req, res) => {
         .update(ordersTable)
         .set({ 
           processedBy: Number(employeeId),
-          status: "approved" // Automatically approve when assigning
+          status: "accepted" // Automatically accept when assigning
         })
         .where(eq(ordersTable.id, Number(id)))
         .returning();
@@ -1034,8 +1034,8 @@ export const cancelUserOrder = async (req, res) => {
       const orderInfo = orderData[0];
       const orderId = orderInfo.id;
 
-      // 2. State Check (Allow pending, approved, and accepted)
-      if (orderInfo.status !== "pending" && orderInfo.status !== "approved" && orderInfo.status !== "accepted") {
+      // 2. State Check (Allow pending and accepted)
+      if (orderInfo.status !== "pending" && orderInfo.status !== "accepted") {
         throw new Error(`Order cannot be cancelled because it is currently '${orderInfo.status}'.`);
       }
 
@@ -1139,8 +1139,8 @@ export const submitReturnOrder = async (req, res) => {
     const order = orderRef[0];
 
     // 2. Security & Status Validation
-    if (order.status !== "delivered") {
-      return res.status(400).json({ success: false, message: "Only delivered orders can be returned" });
+    if (order.status !== "completed") {
+      return res.status(400).json({ success: false, message: "Only completed orders can be returned" });
     }
 
     // 3. Process items in a transaction
@@ -1213,7 +1213,7 @@ export const submitReturnOrder = async (req, res) => {
       }
 
       // 6. Log a tracking event on the main order (Simple way requested)
-      await addOrderTrackingEvent(tx, order.id, "delivered", `Return request submitted for items: ${items.map(i => i.batchId).join(", ")}`);
+      await addOrderTrackingEvent(tx, order.id, "completed", `Return request submitted for items: ${items.map(i => i.batchId).join(", ")}`);
 
       return { returnOrderId: newReturnOrder.id, refund: totalRefundAmount.toFixed(2) };
     });
@@ -1321,8 +1321,8 @@ export const getReturnDetails = async (req, res) => {
 
     const order = orderRef[0];
 
-    if (order.status !== "delivered") {
-      return res.status(400).json({ success: false, message: "Only delivered orders can be returned" });
+    if (order.status !== "completed") {
+      return res.status(400).json({ success: false, message: "Only completed orders can be returned" });
     }
 
     // 2. Fetch Order Items joined with Batch Info for expiry

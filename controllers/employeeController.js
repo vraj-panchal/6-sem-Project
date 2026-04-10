@@ -484,8 +484,7 @@ export const getAssignedOrders = async (req, res) => {
           eq(orderAssignmentsTable.status, "assigned"),
           eq(orderAssignmentsTable.status, "accepted"),
           eq(orderAssignmentsTable.status, "packed"),
-          eq(orderAssignmentsTable.status, "shipped"),
-          eq(orderAssignmentsTable.status, "in_progress")
+          eq(orderAssignmentsTable.status, "shipped")
         )
       ))
       .orderBy(desc(orderAssignmentsTable.assignedAt));
@@ -493,7 +492,7 @@ export const getAssignedOrders = async (req, res) => {
     // 2. Split into Notifications vs Active Tasks
     const notifications = allAssignments.filter(a => a.assignmentStatus === "assigned");
     const activeTasks = allAssignments.filter(a =>
-      ["accepted", "packed", "shipped", "in_progress"].includes(a.assignmentStatus)
+      ["accepted", "packed", "shipped"].includes(a.assignmentStatus)
     );
 
     return res.status(200).json({
@@ -547,14 +546,14 @@ export const updateAssignmentStatus = async (req, res) => {
         .limit(1);
 
       if (mainOrder.length > 0 && mainOrder[0].status === "cancelled") {
-        throw new Error("Cannot update progress: This order has been cancelled by the customer.");
+        return { error: "Cannot update progress: This order has been cancelled by the customer.", status: 400 };
       }
       // ----------------------------
 
       // 2. Map the selection to both Assignment Status & Main Order Status
       let milestoneMessage = "";
       let mainOrderStatus = "";
-      let assignmentStatus = status; // Default is what the user sent
+      let assignmentStatus = status; 
 
       if (status === "accepted") {
         mainOrderStatus = "accepted";
@@ -571,7 +570,7 @@ export const updateAssignmentStatus = async (req, res) => {
         milestoneMessage = "Your order is out for delivery! Our partner is on the way.";
       }
       else if (status === "completed") {
-        mainOrderStatus = "delivered";
+        mainOrderStatus = "completed";
         assignmentStatus = "completed";
         milestoneMessage = "Order delivered successfully! Thank you for shopping with us.";
       }
@@ -585,7 +584,7 @@ export const updateAssignmentStatus = async (req, res) => {
 
       // 4. Update main orders table
       const orderUpdateData = { status: mainOrderStatus };
-      if (mainOrderStatus === "delivered") {
+      if (mainOrderStatus === "completed") {
         const deliveryTime = new Date();
         deliveryTime.setHours(13, 30, 0, 0);
         orderUpdateData.deliveredAt = deliveryTime;
@@ -606,6 +605,10 @@ export const updateAssignmentStatus = async (req, res) => {
       return updatedAssignment[0];
     });
 
+    if (result.error) {
+      return res.status(result.status).json({ success: false, message: result.error });
+    }
+
     return res.status(200).json({
       success: true,
       message: `Progress updated to ${status}`,
@@ -616,8 +619,10 @@ export const updateAssignmentStatus = async (req, res) => {
       return res.status(404).json({ success: false, message: err.message });
     }
     console.error("Update Assignment Error:", err);
-    return res.status(500).json({
+    return res.status(400).json({
       success: false,
+      message: err.message || "Internal server error"
+    });
       message: err.message || "Internal server error"
     });
   }
