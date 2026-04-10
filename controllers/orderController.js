@@ -12,7 +12,7 @@ import { orderTrackingTable } from "../src/db/schema/orderTracking.js";
 import { productTransactionsTable } from "../src/db/schema/productTransactions.js";
 import { returnOrdersTable, returnOrderItemsTable } from "../src/db/schema/returnOrders.js";
 
-import { formatDateIST, calculateExpectedDate, getISTDateNoon } from "../utils/dateFormatter.js";
+import { formatDateIST, calculateExpectedDate, getISTDateNoon, getCurrentISTDate } from "../utils/dateFormatter.js";
 import { sendOrderInvoiceEmail } from "../utils/mailer.js";
 
 // HELPER: Generate a custom Order Number (e.g., ORD-240405-X9B)
@@ -738,6 +738,7 @@ export const assignOrderToEmployee = async (req, res) => {
           employeeId: Number(employeeId),
           assignedBy: adminId,
           status: "assigned",
+          assignedAt: getCurrentISTDate()
         })
         .returning();
 

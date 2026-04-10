@@ -42,7 +42,11 @@ router.put("/reset-password-verify", upload.none(), verifyEmployeePasswordResetO
 router.get("/dashboard", isEmployeeLoggedIn, (req, res) => {
   res.status(200).json({
     success: true,
-    employee: req.employee,
+    employee: {
+      ...req.employee,
+      image: req.employee.profile_image,
+      imageUrl: req.employee.profile_image,
+    },
   });
 });
 router.get("/profile", isEmployeeLoggedIn, getEmployeeProfile);

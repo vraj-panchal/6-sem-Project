@@ -716,7 +716,11 @@ export const getAssignmentDetails = async (req, res) => {
 export const getEmployeeProfile = async (req, res) => {
   res.status(200).json({
     success: true,
-    data: req.employee,
+    data: {
+      ...req.employee,
+      image: req.employee.profile_image,
+      imageUrl: req.employee.profile_image,
+    }
   });
 };
 

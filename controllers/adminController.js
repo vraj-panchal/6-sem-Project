@@ -657,7 +657,11 @@ export const getAdminDashboard = async (req, res) => {
   res.status(200).json({
     success: true,
     message: "Welcome Admin Dashboard",
-    admin: req.admin,
+    admin: {
+      ...req.admin,
+      image: req.admin.profile_image,
+      imageUrl: req.admin.profile_image,
+    },
   });
 };
 
@@ -665,6 +669,10 @@ export const getAdminDashboard = async (req, res) => {
 export const getAdminProfile = async (req, res) => {
   res.status(200).json({
     success: true,
-    data: req.admin,
+    data: {
+      ...req.admin,
+      image: req.admin.profile_image,
+      imageUrl: req.admin.profile_image,
+    }
   });
 };

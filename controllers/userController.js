@@ -400,8 +400,13 @@ export const getUserProfile = async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      data: user[0],
+      data: {
+        ...user[0],
+        image: user[0].profile_image,
+        imageUrl: user[0].profile_image,
+      }
     });
+
   } catch (err) {
     return res.status(500).json({ success: false, message: err.message });
   }

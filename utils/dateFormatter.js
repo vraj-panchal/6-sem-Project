@@ -41,3 +41,14 @@ export const getISTDateNoon = () => {
   date.setUTCHours(6, 30, 0, 0);
   return date;
 };
+
+/**
+ * Returns a Date object reflecting the current Indian Standard Time (UTC + 5:30)
+ * This is useful for saving exact local creation timestamps to the DB.
+ */
+export const getCurrentISTDate = () => {
+  const date = new Date();
+  date.setUTCHours(date.getUTCHours() + 5);
+  date.setUTCMinutes(date.getUTCMinutes() + 30);
+  return date;
+};
