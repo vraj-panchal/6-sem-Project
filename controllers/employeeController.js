@@ -511,13 +511,13 @@ export const updateAssignmentStatus = async (req, res) => {
     const { status } = req.body || {};
     const employeeId = req.employee.id;
 
-    const validStatuses = ["accepted", "in_progress", "completed"];
+    const validStatuses = ["accepted", "packed", "shipped", "completed"];
     if (!validStatuses.includes(status)) {
-      return res.status(400).json({ success: false, message: "Invalid fulfillment status" });
+      return res.status(400).json({ success: false, message: "Invalid status. Use: accepted, packed, shipped, or completed" });
     }
 
     const result = await db.transaction(async (tx) => {
-      // 1. Verify existence and ownership
+      // 1. Verify existence
       const assignment = await tx
         .select()
         .from(orderAssignmentsTable)
@@ -530,35 +530,55 @@ export const updateAssignmentStatus = async (req, res) => {
 
       const orderId = assignment[0].orderId;
 
-      // 2. Update assignment status
+      // 2. Map the selection to both Assignment Status & Main Order Status
+      let milestoneMessage = "";
+      let mainOrderStatus = "";
+      let assignmentStatus = status; // Default is what the user sent
+
+      if (status === "accepted") {
+        mainOrderStatus = "approved";
+        milestoneMessage = "Your delivery partner has accepted the order and is preparing for delivery.";
+      } 
+      else if (status === "packed") {
+        mainOrderStatus = "packed";
+        assignmentStatus = "accepted"; // Assignment is still in 'accepted' phase
+        milestoneMessage = "Your order has been packed and is ready for shipping.";
+      } 
+      else if (status === "shipped") {
+        mainOrderStatus = "shipped";
+        assignmentStatus = "in_progress"; // Now it is physically moving
+        milestoneMessage = "Your order is out for delivery! Our partner is on the way.";
+      } 
+      else if (status === "completed") {
+        mainOrderStatus = "delivered";
+        assignmentStatus = "completed";
+        milestoneMessage = "Order delivered successfully! Thank you for shopping with us.";
+      }
+
+      // 3. Update assignment table
       const updatedAssignment = await tx
         .update(orderAssignmentsTable)
-        .set({ status: status })
+        .set({ status: assignmentStatus })
         .where(eq(orderAssignmentsTable.id, Number(id)))
         .returning();
 
-      // 3. LOG TRACKING MILESTONE
-      let milestoneMessage = "";
-      if (status === "accepted") {
-        milestoneMessage = "Your delivery partner has accepted the order and is preparing for delivery.";
-      } else if (status === "in_progress") {
-        milestoneMessage = `Your order is out for delivery! Our partner is on the way.`;
-      } else if (status === "completed") {
-        milestoneMessage = "Order delivered successfully! Thank you for shopping with us.";
-        
-        // Auto-update main order status to 'delivered'
+      // 4. Update main orders table
+      const orderUpdateData = { status: mainOrderStatus };
+      if (mainOrderStatus === "delivered") {
         const deliveryTime = new Date();
-        deliveryTime.setHours(13, 30, 0, 0); // Set to 1:30 PM (within 9AM-4PM window)
-        
-        await tx
-          .update(ordersTable)
-          .set({ status: "delivered", deliveredAt: deliveryTime })
-          .where(eq(ordersTable.id, orderId));
+        deliveryTime.setHours(13, 30, 0, 0); 
+        orderUpdateData.deliveredAt = deliveryTime;
       }
 
+      await tx
+        .update(ordersTable)
+        .set(orderUpdateData)
+        .where(eq(ordersTable.id, orderId));
+
+      // 5. Add a record to tracking history
       await tx.insert(orderTrackingTable).values({
         orderId: orderId,
-        status: status === "completed" ? "delivered" : "approved", 
+        status: mainOrderStatus,
         message: milestoneMessage
       });
 
