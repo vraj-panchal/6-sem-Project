@@ -49,6 +49,8 @@ import {
   getAdminOrderDetail,
   getReturnOrders,
   getReturnOrderById,
+  adminAcceptReturn,
+  adminRejectReturn,
   adminCompleteReturn
 } from "../controllers/orderController.js";
 
