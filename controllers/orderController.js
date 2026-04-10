@@ -1281,13 +1281,17 @@ export const getReturnOrderById = async (req, res) => {
         batchId: returnOrderItemsTable.batchId,
         quantity: returnOrderItemsTable.quantity,
         refundAmount: returnOrderItemsTable.refundAmount,
-        productName: orderItemsTable.productName
+        productName: productsTable.productName,
+        brand: productsTable.brand,
+        imageUrl: productsTable.imageUrl,
+        batchNo: productBatchesTable.batchNo,
+        sku: productBatchesTable.sku,
+        unit: productBatchesTable.unit,
+        mrp: productBatchesTable.mrp
       })
       .from(returnOrderItemsTable)
-      .innerJoin(orderItemsTable, and(
-        eq(orderItemsTable.batchId, returnOrderItemsTable.batchId),
-        eq(orderItemsTable.orderId, returnOrder[0].orderId)
-      ))
+      .innerJoin(productBatchesTable, eq(returnOrderItemsTable.batchId, productBatchesTable.id))
+      .innerJoin(productsTable, eq(productBatchesTable.productId, productsTable.id))
       .where(eq(returnOrderItemsTable.returnOrderId, Number(id)));
 
     return res.status(200).json({
