@@ -936,6 +936,10 @@ export const searchProducts = async (req, res) => {
         id: productsTable.id,
         productName: productsTable.productName,
         brand: productsTable.brand,
+        description: productsTable.description, // Added
+        cgst: productsTable.cgst, // Added
+        sgst: productsTable.sgst, // Added
+        igst: productsTable.igst, // Added
         imageUrl: productsTable.imageUrl,
         sku: rankedBatches.sku,
         unit: rankedBatches.unit,
