@@ -710,8 +710,8 @@ export const assignOrderToEmployee = async (req, res) => {
       const updatedOrder = await tx
         .update(ordersTable)
         .set({ 
-          processedBy: Number(employeeId),
-          status: "accepted" // Automatically accept when assigning
+          processedBy: Number(employeeId)
+          // status: "accepted" // REMOVED: Status will now only change when the employee accepts
         })
         .where(eq(ordersTable.id, Number(id)))
         .returning();
@@ -743,7 +743,7 @@ export const assignOrderToEmployee = async (req, res) => {
         .returning();
 
       // Log Tracking Milestone: "Assigned to Employee"
-      await addOrderTrackingEvent(tx, Number(id), "accepted", `Order assigned to our delivery partner for processing.`);
+      await addOrderTrackingEvent(tx, Number(id), "pending", `Order assigned to our delivery partner. Awaiting their acceptance.`);
 
       return { order: updatedOrder[0], assignment: newAssignment[0] };
     });
