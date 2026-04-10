@@ -1030,8 +1030,8 @@ export const cancelUserOrder = async (req, res) => {
       const orderInfo = orderData[0];
       const orderId = orderInfo.id;
 
-      // 2. State Check
-      if (orderInfo.status !== "pending" && orderInfo.status !== "approved") {
+      // 2. State Check (Restrict to 'pending' only as requested)
+      if (orderInfo.status !== "pending") {
         throw new Error(`Order cannot be cancelled because it is currently '${orderInfo.status}'.`);
       }
 
