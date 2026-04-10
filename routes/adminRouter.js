@@ -48,7 +48,8 @@ import {
   assignOrderToEmployee,
   getAdminOrderDetail,
   getReturnOrders,
-  getReturnOrderById
+  getReturnOrderById,
+  adminCompleteReturn
 } from "../controllers/orderController.js";
 
 dotenv.config();
@@ -114,5 +115,6 @@ router.put("/orders/:id/assign", isAdminLoggedIn, assignOrderToEmployee);
 // Return Management
 router.get("/returns", isAdminLoggedIn, getReturnOrders);
 router.get("/returns/:id", isAdminLoggedIn, getReturnOrderById);
+router.put("/returns/:id/complete", isAdminLoggedIn, upload.none(), adminCompleteReturn);
 
 export default router;

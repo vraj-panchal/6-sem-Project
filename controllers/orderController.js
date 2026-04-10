@@ -1368,3 +1368,128 @@ export const getReturnDetails = async (req, res) => {
     return res.status(500).json({ success: false, message: err.message });
   }
 };
+
+// ADMIN COMPLETE RETURN
+export const adminCompleteReturn = async (req, res) => {
+  try {
+    const adminId = req.user.id;
+    const { id } = req.params; // Return Order ID
+
+    // 1. Fetch return order
+    const returnOrderRef = await db
+      .select()
+      .from(returnOrdersTable)
+      .where(eq(returnOrdersTable.id, Number(id)))
+      .limit(1);
+
+    if (!returnOrderRef.length) {
+      return res.status(404).json({ success: false, message: "Return order not found" });
+    }
+
+    const returnOrder = returnOrderRef[0];
+
+    if (returnOrder.status === "completed") {
+      return res.status(400).json({ success: false, message: "Return already completed" });
+    }
+
+    // 2. Perform restocking and status updates in a transaction
+    await db.transaction(async (tx) => {
+      // A. Fetch all items in this return
+      const items = await tx
+        .select()
+        .from(returnOrderItemsTable)
+        .where(eq(returnOrderItemsTable.returnOrderId, returnOrder.id));
+
+      for (const item of items) {
+        // i. Fetch current batch data
+        const batch = await tx
+          .select()
+          .from(productBatchesTable)
+          .where(eq(productBatchesTable.id, item.batchId))
+          .limit(1);
+
+        if (!batch.length) throw new Error(`Batch ${item.batchId} not found`);
+
+        const b = batch[0];
+        const oldStock = Number(b.currentStock || 0);
+        const newStock = oldStock + Number(item.quantity);
+
+        // ii. Update batch stock
+        await tx
+          .update(productBatchesTable)
+          .set({ currentStock: newStock.toString() })
+          .where(eq(productBatchesTable.id, item.batchId));
+
+        // iii. Log transaction
+        await tx.insert(productTransactionsTable).values({
+          batchId: item.batchId,
+          transactionType: "return",
+          quantity: Number(item.quantity),
+          previousStock: oldStock,
+          newStock: newStock,
+          performedBy: adminId,
+          remarks: `Return approved by Admin for Order #${returnOrder.orderId}`
+        });
+      }
+
+      // B. Update Return Order status
+      await tx
+        .update(returnOrdersTable)
+        .set({ status: "completed", processedBy: adminId, updatedAt: new Date() })
+        .where(eq(returnOrdersTable.id, returnOrder.id));
+
+      // C. Update Main Order status to "returned"
+      await tx
+        .update(ordersTable)
+        .set({ status: "returned" })
+        .where(eq(ordersTable.id, returnOrder.orderId));
+
+      // D. Log tracking event on main order
+      await tx.insert(orderTrackingTable).values({
+        orderId: returnOrder.orderId,
+        status: "returned",
+        message: "Return approved and completed by Admin. Stock updated."
+      });
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "Return completed successfully by Admin. Stock restored."
+    });
+
+  } catch (err) {
+    console.error("Admin Return Completion Error:", err.message);
+    return res.status(500).json({
+      success: false,
+      message: err.message || "Internal Server Error"
+    });
+  }
+};
+
+// GET MY RETURNS (USER)
+export const getMyReturns = async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    const myReturns = await db
+      .select({
+        id: returnOrdersTable.id,
+        orderNumber: returnOrdersTable.orderNumber,
+        totalRefund: returnOrdersTable.totalRefundAmount,
+        status: returnOrdersTable.status,
+        reason: returnOrdersTable.reason,
+        createdAt: returnOrdersTable.createdAt,
+        updatedAt: returnOrdersTable.updatedAt
+      })
+      .from(returnOrdersTable)
+      .where(eq(returnOrdersTable.userId, userId))
+      .orderBy(desc(returnOrdersTable.createdAt));
+
+    return res.status(200).json({
+      success: true,
+      data: myReturns
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};

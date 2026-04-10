@@ -11,8 +11,7 @@ import {
   getEmployeeProfileByUsername,
   getAssignedOrders,
   updateAssignmentStatus,
-  getAssignmentDetails,
-  completeReturnOrder
+  getAssignmentDetails
 } from "../controllers/employeeController.js";
 
 import { isAdminLoggedIn } from "../middlewares/isAdminLoggedIn.js";
@@ -55,6 +54,5 @@ router.get("/categories/:categoryname", isEmployeeLoggedIn, getProductsByCategor
 router.get("/assigned-orders", isEmployeeLoggedIn, getAssignedOrders);
 router.get("/assignment/:id/details", isEmployeeLoggedIn, getAssignmentDetails);
 router.put("/assignment/:id/status", isEmployeeLoggedIn, upload.none(), updateAssignmentStatus);
-router.put("/returns/:returnOrderId/complete", isEmployeeLoggedIn, upload.none(), completeReturnOrder);
 
 export default router;
