@@ -4,7 +4,9 @@ import dotenv from "dotenv";
 import { 
   listProductsWithPricing, 
   getProductsByCategoryName, 
-  getProductDetailsBySku 
+  getProductDetailsBySku,
+  searchProducts,
+  getSuggestedProducts
 } from "../controllers/productController.js";
 import { 
   registerUser, 
@@ -56,6 +58,8 @@ router.get("/product/:sku", getProductDetailsBySku);
 router.get("/products/sku/:sku", getProductDetailsBySku); // Added to match Postman request
 router.get("/categories", listCategories);
 router.get("/categories/:categoryname", getProductsByCategoryName);
+router.get("/products/search", searchProducts);
+router.get("/products/suggest/:id", getSuggestedProducts);
 
 // Cart Routes
 router.get("/cart", isUserLoggedIn, getCart);

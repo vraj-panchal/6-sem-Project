@@ -1,4 +1,4 @@
-import { eq, and, gt, asc, desc, sql, count, ne } from "drizzle-orm";
+import { eq, and, gt, asc, desc, sql, count, ne, ilike, or } from "drizzle-orm";
 import { db } from "../config/db.js";
 import { productsTable } from "../src/db/schema/product.js";
 import { productBatchesTable } from "../src/db/schema/productBatches.js";
@@ -874,3 +874,159 @@ export const getProductDetailsBySku = async (req, res) => {
   }
 };
 
+// Search Products (User API)
+export const searchProducts = async (req, res) => {
+  try {
+    const { q } = req.query;
+    if (!q) {
+      return res.status(400).json({ success: false, message: "Search query 'q' is required" });
+    }
+
+    const page = Math.max(parseInt(req.query.page) || 1, 1);
+    const limit = Math.min(Math.max(parseInt(req.query.limit) || 10, 1), 50);
+    const offset = (page - 1) * limit;
+
+    await deactivateExpiredBatches();
+
+    const searchPattern = `%${q}%`;
+
+    // Step 1: Subquery to rank batches by proximity to expiry
+    const rankedBatches = db
+      .select({
+        productId: productBatchesTable.productId,
+        sku: productBatchesTable.sku,
+        unit: productBatchesTable.unit,
+        baseWeight: productBatchesTable.baseWeight,
+        baseUnit: productBatchesTable.baseUnit,
+        batchNo: productBatchesTable.batchNo,
+        expiryDate: productBatchesTable.expiryDate,
+        stock: productBatchesTable.currentStock,
+        totalStock: sql`cast(sum(${productBatchesTable.currentStock}) OVER (PARTITION BY ${productBatchesTable.productId}) as float)`.as("totalStock"),
+        mrp: productBatchesTable.mrp,
+        basePrice: productBatchesTable.basePrice,
+        discount: productBatchesTable.discount,
+        rowNumber: sql`ROW_NUMBER() OVER (PARTITION BY ${productBatchesTable.productId} ORDER BY ${productBatchesTable.expiryDate} ASC)`.as("rowNumber"),
+      })
+      .from(productBatchesTable)
+      .where(
+        and(
+          eq(productBatchesTable.isActive, true),
+          gt(productBatchesTable.currentStock, 0),
+          gt(productBatchesTable.expiryDate, sql`CURRENT_DATE`)
+        )
+      )
+      .as("rankedBatches");
+
+    // Total Count for Search Result
+    const totalCountResult = await db
+      .select({ value: count() })
+      .from(productsTable)
+      .innerJoin(rankedBatches, and(eq(productsTable.id, rankedBatches.productId), sql`${rankedBatches.rowNumber} = 1`))
+      .where(
+        and(
+          eq(productsTable.isActive, true),
+          or(ilike(productsTable.productName, searchPattern), ilike(productsTable.brand, searchPattern))
+        )
+      );
+
+    const totalItems = Number(totalCountResult[0]?.value ?? 0);
+
+    const productsResult = await db
+      .select({
+        id: productsTable.id,
+        productName: productsTable.productName,
+        brand: productsTable.brand,
+        imageUrl: productsTable.imageUrl,
+        sku: rankedBatches.sku,
+        unit: rankedBatches.unit,
+        baseWeight: rankedBatches.baseWeight,
+        baseUnit: rankedBatches.baseUnit,
+        categoryName: categoriesTable.categoryName,
+        mrp: rankedBatches.mrp,
+        basePrice: rankedBatches.basePrice,
+        discount: rankedBatches.discount,
+        totalPrice: sql`
+          ROUND(
+            ((${rankedBatches.basePrice} - ${rankedBatches.discount}) +
+            ((${rankedBatches.basePrice} - ${rankedBatches.discount}) *
+            (COALESCE(${productsTable.cgst}, 0) +
+             COALESCE(${productsTable.sgst}, 0) +
+             COALESCE(${productsTable.igst}, 0)) / 100)
+          ), 2)
+        `.mapWith(Number),
+      })
+      .from(productsTable)
+      .innerJoin(rankedBatches, and(eq(productsTable.id, rankedBatches.productId), sql`${rankedBatches.rowNumber} = 1`))
+      .leftJoin(categoriesTable, eq(productsTable.categoryId, categoriesTable.id))
+      .where(
+        and(
+          eq(productsTable.isActive, true),
+          or(ilike(productsTable.productName, searchPattern), ilike(productsTable.brand, searchPattern))
+        )
+      )
+      .orderBy(asc(productsTable.productName))
+      .limit(limit)
+      .offset(offset);
+
+    return res.status(200).json({
+      success: true,
+      pagination: {
+        totalItems,
+        currentPage: page,
+        totalPages: Math.ceil(totalItems / limit),
+      },
+      data: productsResult,
+    });
+  } catch (error) {
+    console.error("Search API Error:", error);
+    return res.status(500).json({ success: false, message: "Internal Server Error" });
+  }
+};
+
+// Get Suggested Products (Related items in same category)
+export const getSuggestedProducts = async (req, res) => {
+  try {
+    const { id } = req.params; // current product ID
+
+    // 1. Get the current product's category
+    const currentProductResult = await db
+      .select({ categoryId: productsTable.categoryId })
+      .from(productsTable)
+      .where(eq(productsTable.id, Number(id)))
+      .limit(1);
+
+    if (!currentProductResult.length) {
+      return res.status(404).json({ success: false, message: "Product not found" });
+    }
+
+    const { categoryId } = currentProductResult[0];
+
+    // 2. Fetch up to 8 other active products in the same category
+    const suggestions = await db
+      .select({
+        id: productsTable.id,
+        productName: productsTable.productName,
+        brand: productsTable.brand,
+        imageUrl: productsTable.imageUrl,
+        categoryName: categoriesTable.categoryName,
+      })
+      .from(productsTable)
+      .leftJoin(categoriesTable, eq(productsTable.categoryId, categoriesTable.id))
+      .where(
+        and(
+          eq(productsTable.categoryId, categoryId),
+          ne(productsTable.id, Number(id)), // Exclude the same product
+          eq(productsTable.isActive, true)
+        )
+      )
+      .limit(8);
+
+    return res.status(200).json({
+      success: true,
+      data: suggestions,
+    });
+  } catch (error) {
+    console.error("Suggestions API Error:", error);
+    return res.status(500).json({ success: false, message: "Internal Server Error" });
+  }
+};
