@@ -623,8 +623,6 @@ export const updateAssignmentStatus = async (req, res) => {
       success: false,
       message: err.message || "Internal server error"
     });
-      message: err.message || "Internal server error"
-    });
   }
 };
 // ================= GET ASSIGNMENT DETAILS (ITEMS LIST) =================
