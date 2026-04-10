@@ -341,7 +341,7 @@ Content-Type: text/html; charset=utf-8
 };
 
 export const sendOrderInvoiceEmail = async (email, username, orderData) => {
-  const logoUrl = "https://res.cloudinary.com/dxak3pk4u/image/upload/v1775545588/Green_Fluid_Dome_Logo_qhdt4z.png";
+  const logoUrl = "https://res.cloudinary.com/dxak3pk4u/image/upload/v1775852239/mixboard-image_yfthal.png";
 
   try {
     const accessToken = await getAccessToken();
