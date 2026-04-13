@@ -101,8 +101,19 @@ export const checkoutCOD = async (req, res) => {
         return res.status(400).json({ success: false, message: `Insufficient stock for ${item.productName}` });
       }
 
-      const pricePerUnit = Number(item.basePrice) - Number(item.discount);
-      const totalItemPrice = pricePerUnit * Number(item.quantity);
+      const qty = Number(item.quantity);
+      const basePrice = Number(item.basePrice);
+      let discount = Number(item.discount) || 0;
+
+      // Apply automatic bulk B2B discounts
+      if (qty >= 200) {
+        discount = basePrice * 0.20; // 20% off
+      } else if (qty >= 50) {
+        discount = basePrice * 0.10; // 10% off
+      }
+
+      const pricePerUnit = basePrice - discount;
+      const totalItemPrice = pricePerUnit * qty;
       const taxPercentage = Number(item.cgst) + Number(item.sgst) + Number(item.igst);
 
       // Tax Extraction from Inclusive Price
@@ -119,7 +130,7 @@ export const checkoutCOD = async (req, res) => {
         quantity: String(item.quantity),
         totalItemPrice: String(totalItemPrice),
         mrp: String(item.mrp),
-        discount: String(item.discount),
+        discount: String(discount),
         batchStock: item.batchStock, // Added missing stock for transaction history
       });
     }
@@ -337,8 +348,19 @@ export const placeDirectOrder = async (req, res) => {
     }
 
     // 3. Calculate pricing
-    const pricePerUnit = Number(itemData.basePrice) - Number(itemData.discount);
-    const totalItemPrice = pricePerUnit * Number(quantity);
+    const qty = Number(quantity);
+    const basePrice = Number(itemData.basePrice);
+    let discount = Number(itemData.discount) || 0;
+
+    // Apply automatic bulk B2B discounts
+    if (qty >= 200) {
+      discount = basePrice * 0.20; // 20% off
+    } else if (qty >= 50) {
+      discount = basePrice * 0.10; // 10% off
+    }
+
+    const pricePerUnit = basePrice - discount;
+    const totalItemPrice = pricePerUnit * qty;
     const taxPercentage = Number(itemData.cgst) + Number(itemData.sgst) + Number(itemData.igst);
 
     // Tax Extraction from Inclusive Price
@@ -430,7 +452,7 @@ export const placeDirectOrder = async (req, res) => {
         quantity: quantity,
         pricePerUnit: pricePerUnit,
         mrp: itemData.mrp,
-        discount: itemData.discount,
+        discount: discount,
         totalItemPrice: totalItemPrice
       }],
       expectedDeliveryDate: formatDateIST(createdOrder.expectedDeliveryDate)

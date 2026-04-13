@@ -47,7 +47,14 @@ export const getCartData = async (userId) => {
         const qty = Number(item.quantity) || 0;
         const mrp = Number(item.mrp) || 0;
         const basePrice = Number(item.basePrice) || 0;
-        const discount = Number(item.discount) || 0;
+        let discount = Number(item.discount) || 0;
+        
+        // Apply automatic bulk B2B discounts
+        if (qty >= 200) {
+            discount = basePrice * 0.20; // 20% off
+        } else if (qty >= 50) {
+            discount = basePrice * 0.10; // 10% off
+        }
         
         const sellingPriceWithTax = basePrice - discount;
         const cgst = Number(item.cgst) || 0;

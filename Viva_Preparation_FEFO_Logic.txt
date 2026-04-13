@@ -1,0 +1,96 @@
+// ==========================================
+// COMPLEX LOGIC: SMART FEFO (First-Expired, First-Out) SPLITTING
+// Location: controllers/cartController.js -> addToCart()
+// ==========================================
+
+// --- OPTION B: SMART FEFO SPLITTING (Automated) ---
+const allAvailableBatches = await db
+    .select()
+    .from(productBatchesTable)
+    .where(
+        and(
+            eq(productBatchesTable.productId, productId),
+            eq(productBatchesTable.isActive, true),
+            gt(productBatchesTable.currentStock, 0),
+            gt(productBatchesTable.expiryDate, sql`CURRENT_DATE`)
+        )
+    )
+    .orderBy(asc(productBatchesTable.expiryDate));
+
+const totalStock = allAvailableBatches.reduce((sum, batch) => sum + Number(batch.currentStock), 0);
+
+if (totalStock < qtyToAdd) {
+    return res.status(400).json({ success: false, message: "Not enough total stock available for this product" });
+}
+
+let remainingQty = qtyToAdd;
+for (const batch of allAvailableBatches) {
+    if (remainingQty <= 0) break;
+
+    const batchStock = Number(batch.currentStock);
+    const qtyFromThisBatch = Math.min(remainingQty, batchStock);
+
+    const existingItem = await db
+        .select()
+        .from(cartItemsTable)
+        .where(and(eq(cartItemsTable.cartId, cartId), eq(cartItemsTable.batchId, batch.id)));
+
+    if (existingItem.length > 0) {
+        const currentCartQty = Number(existingItem[0].quantity);
+        if (currentCartQty + qtyFromThisBatch > batchStock) continue;
+
+        await db
+            .update(cartItemsTable)
+            .set({ quantity: String(currentCartQty + qtyFromThisBatch) })
+            .where(eq(cartItemsTable.id, existingItem[0].id));
+    } else {
+        await db.insert(cartItemsTable).values({
+            cartId,
+            batchId: batch.id,
+            quantity: String(qtyFromThisBatch),
+        });
+    }
+
+    remainingQty -= qtyFromThisBatch;
+}
+
+if (remainingQty > 0) {
+     return res.status(400).json({ success: false, message: "Could not fulfill full quantity from available batches" });
+}
+
+const updatedCart = await getCartData(userId);
+return res.status(200).json({ success: true, message: "Items added to cart successfully", data: updatedCart });
+
+
+
+// ==========================================
+// VIVA EXPLANATION
+// ==========================================
+
+1. WHAT IS THIS LOGIC?
+This logic implements the "FEFO" (First-Expired, First-Out) inventory management technique. When a customer adds a product quantity to their cart, this code automatically allocates that quantity across different available batches of the product, prioritizing the batches that are going to expire the soonest.
+
+2. WHY WE USE IT? (Advantages)
+- Reduces Spoilage and Waste: It ensures that older stock (closer to expiry) is sold off first before newer stock is touched. If your e-commerce shop handles perishables or FMCG (Fast-Moving Consumer Goods), this is essential to minimize loss.
+- Better Inventory Rotation: It automates what would usually be a headache for warehouse staff, ensuring that customers are automatically assigned batches starting from the oldest available stock.
+- Automated Splitting: It handles Edge Cases. If a user asks for 10 items, but the oldest batch only has 3 items left, the system will take 3 from the first batch and then move on to the next batch with the closest expiry date to get the remaining 7 items.
+
+3. HOW TO USE / EXPLAIN THIS IN YOUR PROJECT?
+- Location: The code exists in your `cartController.js` inside the `addToCart` function.
+- Flow Explanation: If the user doesn't pick a specific batch manually from the frontend, this code runs.
+  -> Step 1: It queries the database for all active batches of the product that are currently strictly above 0 stock and not expired (`expiryDate > CURRENT_DATE`).
+  -> Step 2: It sorts these fetched batches in ascending order based on their expiry date (`asc(productBatchesTable.expiryDate)`).
+  -> Step 3: It loops over these batches one by one. For each batch, it checks how much quantity we still need (`remainingQty`) and how much this batch can give (`batchStock`).
+  -> Step 4: It deducts the required amount, adds/updates the cartItemsTable specifically associated with that `batchId`, and subtracts from `remainingQty`.
+  -> Step 5: If the loop finishes but we still have `remainingQty > 0`, it throws an error showing that it failed to fulfill the order completely due to some weird stock mismatch, else it succeeds.
+
+4. POTENTIAL VIVA QUESTIONS & HOW TO ANSWER:
+
+Q: "Why did you use FEFO instead of FIFO (First-In, First-Out)?"
+A: "FIFO just looks at when the item arrived in the warehouse. FEFO looks at when the item will expire. For grocery/FMCG products, sometimes an item arrives earlier but has a longer shelf life. FEFO is much safer to ensure products don't expire on our shelves."
+
+Q: "What happens if a user adds 15 items, but Batch A has 10 items and Batch B has 10 items?"
+A: "The logic checks the total stock (20) which is enough. It then takes 10 items from Batch A (the one expiring sooner), updates the remainingQty to 5, and takes the remaining 5 from Batch B. In the database, the user will have two separate cart lines: 10 items of Batch A, and 5 items of Batch B."
+
+Q: "How are you avoiding expired products being sold?"
+A: "In the very first database query, I check `gt(productBatchesTable.expiryDate, sql'CURRENT_DATE')` restricting the system from even looking at batches that are already expired."
