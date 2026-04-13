@@ -357,6 +357,7 @@ export const sendOrderInvoiceEmail = async (email, username, orderData) => {
           <td style="padding: 15px; border-bottom: 1px solid #f0f0f0;">
             <p style="margin: 0; font-weight: 600; color: #1e5128; font-size: 14px;">${item.productName}</p>
             <span style="color: #6a994e; font-size: 11px; background: #f0fdf4; padding: 2px 8px; border-radius: 4px; border: 1px solid #dcfce7; display: inline-block; margin-top: 4px;">Qty: ${item.quantity}</span>
+            ${Number(item.discountPercentage) > 0 ? `<span style="color: #c2410c; font-size: 11px; background: #fff7ed; padding: 2px 8px; border-radius: 4px; border: 1px solid #ffedd5; display: inline-block; margin-top: 4px; margin-left: 4px; font-weight: bold;">${item.discountPercentage}% B2B OFF</span>` : ""}
           </td>
           <td style="padding: 15px; border-bottom: 1px solid #f0f0f0; text-align: right; color: #94a3b8; font-size: 13px; text-decoration: line-through;">
             ₹${Number(item.mrp).toFixed(2)}

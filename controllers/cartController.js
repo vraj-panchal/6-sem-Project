@@ -48,12 +48,15 @@ export const getCartData = async (userId) => {
         const mrp = Number(item.mrp) || 0;
         const basePrice = Number(item.basePrice) || 0;
         let discount = Number(item.discount) || 0;
+        let discountPercentage = 0;
         
         // Apply automatic bulk B2B discounts
         if (qty >= 200) {
             discount = Number((basePrice * 0.20).toFixed(2)); // 20% off
+            discountPercentage = 20;
         } else if (qty >= 50) {
             discount = Number((basePrice * 0.10).toFixed(2)); // 10% off
+            discountPercentage = 10;
         }
         
         const sellingPriceWithTax = basePrice - discount;
@@ -90,6 +93,7 @@ export const getCartData = async (userId) => {
             mrp: mrp,
             basePrice: basePrice,
             discount: discount,
+            discountPercentage: discountPercentage,
             payablePricePerUnit: Number(sellingPriceWithTax.toFixed(2)),
             itemTotalMrp: Number(itemTotalMrp.toFixed(2)),
             itemTotalPayable: Number(itemTotalPayable.toFixed(2)),

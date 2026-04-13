@@ -104,12 +104,15 @@ export const checkoutCOD = async (req, res) => {
       const qty = Number(item.quantity);
       const basePrice = Number(item.basePrice);
       let discount = Number(item.discount) || 0;
+      let discountPercentage = 0;
 
       // Apply automatic bulk B2B discounts
       if (qty >= 200) {
         discount = Number((basePrice * 0.20).toFixed(2)); // 20% off
+        discountPercentage = 20;
       } else if (qty >= 50) {
         discount = Number((basePrice * 0.10).toFixed(2)); // 10% off
+        discountPercentage = 10;
       }
 
       const pricePerUnit = basePrice - discount;
@@ -127,10 +130,11 @@ export const checkoutCOD = async (req, res) => {
         batchId: item.batchId,
         productName: item.productName,
         pricePerUnit: String(pricePerUnit),
-        quantity: String(item.quantity),
+        quantity: String(qty),
         totalItemPrice: String(totalItemPrice),
         mrp: String(item.mrp),
         discount: String(discount),
+        discountPercentage: String(discountPercentage),
         batchStock: item.batchStock, // Added missing stock for transaction history
       });
     }
@@ -351,12 +355,15 @@ export const placeDirectOrder = async (req, res) => {
     const qty = Number(quantity);
     const basePrice = Number(itemData.basePrice);
     let discount = Number(itemData.discount) || 0;
+    let discountPercentage = 0;
 
     // Apply automatic bulk B2B discounts
     if (qty >= 200) {
       discount = Number((basePrice * 0.20).toFixed(2)); // 20% off
+      discountPercentage = 20;
     } else if (qty >= 50) {
       discount = Number((basePrice * 0.10).toFixed(2)); // 10% off
+      discountPercentage = 10;
     }
 
     const pricePerUnit = basePrice - discount;
@@ -453,6 +460,7 @@ export const placeDirectOrder = async (req, res) => {
         pricePerUnit: pricePerUnit,
         mrp: itemData.mrp,
         discount: discount,
+        discountPercentage: discountPercentage,
         totalItemPrice: totalItemPrice
       }],
       expectedDeliveryDate: formatDateIST(createdOrder.expectedDeliveryDate)
@@ -470,6 +478,8 @@ export const placeDirectOrder = async (req, res) => {
         quantity: Number(quantity),
         unit: itemData.unit,
         pricePerUnit: pricePerUnit.toFixed(2),
+        discount: discount,
+        discountPercentage: discountPercentage,
         subtotal: preTaxSubtotal.toFixed(2),
         totalTax: totalTax.toFixed(2),
         finalAmount: finalAmount.toFixed(2),
