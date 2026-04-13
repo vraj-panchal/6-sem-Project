@@ -51,9 +51,9 @@ export const getCartData = async (userId) => {
         
         // Apply automatic bulk B2B discounts
         if (qty >= 200) {
-            discount = basePrice * 0.20; // 20% off
+            discount = Number((basePrice * 0.20).toFixed(2)); // 20% off
         } else if (qty >= 50) {
-            discount = basePrice * 0.10; // 10% off
+            discount = Number((basePrice * 0.10).toFixed(2)); // 10% off
         }
         
         const sellingPriceWithTax = basePrice - discount;
