@@ -60,9 +60,9 @@ export const updateProfileImage = async (req, res) => {
     const newImage = req.file ? req.file.path : null;
 
     if (!newImage) {
-      return res.status(400).json({ 
-        success: false, 
-        message: "No image uploaded. Please ensure you are using 'profile_image' as the key in form-data." 
+      return res.status(400).json({
+        success: false,
+        message: "Profile image is required. Please select an image and try again."
       });
     }
 
@@ -392,9 +392,9 @@ export const verifyAdminOTP = async (req, res) => {
     // 🔒 SECURITY CHECK: Ensure this temporary token belongs to an Admin
     const role = await db.select().from(rolesTable).where(eq(rolesTable.id, decoded.role_id)).limit(1);
     if (!role.length || role[0].name !== "admin") {
-      return res.status(403).json({ 
-        success: false, 
-        message: "Security Error: You are trying to verify a User/Employee login through the Admin portal!" 
+      return res.status(403).json({
+        success: false,
+        message: "Security Error: You are trying to verify a User/Employee login through the Admin portal!"
       });
     }
 
@@ -549,9 +549,9 @@ export const verifyAdminPasswordResetOTP = async (req, res) => {
     // SECURITY CHECK: Ensure this temporary token belongs to an Admin
     const role = await db.select().from(rolesTable).where(eq(rolesTable.id, decoded.role_id)).limit(1);
     if (!role.length || role[0].name !== "admin") {
-      return res.status(403).json({ 
-        success: false, 
-        message: "Security Error: Role mismatch!" 
+      return res.status(403).json({
+        success: false,
+        message: "Security Error: Role mismatch!"
       });
     }
 
@@ -603,22 +603,22 @@ export const getDashboardStats = async (req, res) => {
     let totalReturnedCount = 0;
 
     transactions.forEach(t => {
-       if (t.transactionType === "sale") {
-           // Safely calculate final price of item at time of transaction
-           const base = Number(t.basePrice) || 0;
-           const discount = Number(t.discount) || 0;
-           const tax = (Number(t.cgst) || 0) + (Number(t.sgst) || 0) + (Number(t.igst) || 0);
-           
-           const finalItemPrice = (base - discount) + tax;
-           const saleValue = (Number(t.quantity) || 0) * finalItemPrice;
-           
-           totalRevenue += saleValue;
-           totalSalesCount++;
-       } else if (t.transactionType === "damaged") {
-           totalDamagedCount += Number(t.quantity) || 0;
-       } else if (t.transactionType === "return") {
-           totalReturnedCount += Number(t.quantity) || 0;
-       }
+      if (t.transactionType === "sale") {
+        // Safely calculate final price of item at time of transaction
+        const base = Number(t.basePrice) || 0;
+        const discount = Number(t.discount) || 0;
+        const tax = (Number(t.cgst) || 0) + (Number(t.sgst) || 0) + (Number(t.igst) || 0);
+
+        const finalItemPrice = (base - discount) + tax;
+        const saleValue = (Number(t.quantity) || 0) * finalItemPrice;
+
+        totalRevenue += saleValue;
+        totalSalesCount++;
+      } else if (t.transactionType === "damaged") {
+        totalDamagedCount += Number(t.quantity) || 0;
+      } else if (t.transactionType === "return") {
+        totalReturnedCount += Number(t.quantity) || 0;
+      }
     });
 
     const averageSaleValue = totalSalesCount > 0 ? (totalRevenue / totalSalesCount) : 0;
@@ -675,4 +675,4 @@ export const getAdminProfile = async (req, res) => {
       imageUrl: req.admin.profile_image,
     }
   });
-};
+};
