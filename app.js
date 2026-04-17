@@ -2,7 +2,7 @@ import express from "express";
 import dotenv from "dotenv";
 import cookieParser from "cookie-parser";
 import path from "path";
-import { fileURLToPath } from "url"; 
+import { fileURLToPath } from "url";
 import cors from "cors";
 
 // 1. Initialize dotenv immediately so env vars are available
@@ -22,26 +22,26 @@ const __dirname = path.dirname(__filename);
 
 // 5. Setup CORS origins
 const allowedOrigins = [
-    'http://localhost:3000',
-    'http://localhost:5173',
-    'http://127.0.0.1:3000',
-    'http://127.0.0.1:5173',
-    'https://six-sem-project.onrender.com/',
-    'https://project-tau-dusky.vercel.app',
-    process.env.FRONTEND_URL,
+  'http://localhost:3000',
+  'http://localhost:5173',
+  'http://127.0.0.1:3000',
+  'http://127.0.0.1:5173',
+  'https://six-sem-project.onrender.com/',
+  'https://project-tau-dusky.vercel.app',
+  process.env.FRONTEND_URL,
 ].filter(Boolean);
 
 // 6. Apply Middleware
 app.use(cors({
-    origin: function (origin, callback) {
-        if (!origin) return callback(null, true);
-        if (allowedOrigins.includes(origin)) {
-            callback(null, true);
-        } else {
-            callback(new Error('Not allowed by CORS'));
-        }
-    },
-    credentials: true,
+  origin: function (origin, callback) {
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true,
 }));
 
 app.use(express.json());
@@ -61,7 +61,7 @@ app.get("/", (req, res) => {
   });
 });
 
-app.get("/health" , (req, res) => {
+app.get("/health", (req, res) => {
   res.status(200).json({
     success: true,
     message: "Server is running",
