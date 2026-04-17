@@ -21,7 +21,7 @@ export const registerUser = async (req, res) => {
       });
     }
 
-    const image = req.file ? req.file.path : `https://ui-avatars.com/api/?name=${req.body.username || 'User'}&background=random`;
+    const image = req.file ? req.file.path : "https://res.cloudinary.com/dxak3pk4u/image/upload/v1776424445/OIP_1_ygkhfr.jpg";
     const { username, email, phonenumber, password } = result.data;
 
     //  Get role
