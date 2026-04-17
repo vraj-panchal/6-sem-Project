@@ -33,8 +33,8 @@ export const registerEmployee = async (req, res) => {
       });
     }
 
-    const image = req.file ? req.file.path : "/default-profile.png";
     const { username, email, phonenumber, password } = result.data;
+    const image = req.file ? req.file.path : `https://ui-avatars.com/api/?name=${username}&background=random`;
 
     // role = employee
     const role = await db

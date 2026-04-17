@@ -21,7 +21,7 @@ export const registerUser = async (req, res) => {
       });
     }
 
-    const image = req.file ? req.file.path : "/default-profile.png";
+    const image = req.file ? req.file.path : `https://ui-avatars.com/api/?name=${req.body.username || 'User'}&background=random`;
     const { username, email, phonenumber, password } = result.data;
 
     //  Get role
