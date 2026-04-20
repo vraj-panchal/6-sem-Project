@@ -26,8 +26,9 @@ const allowedOrigins = [
   'http://localhost:5173',
   'http://127.0.0.1:3000',
   'http://127.0.0.1:5173',
-  'https://six-sem-project.onrender.com/',
+  'https://six-sem-project.onrender.com',
   'https://project-tau-dusky.vercel.app',
+  'https://imternal-soft.vercel.app',
   process.env.FRONTEND_URL,
 ].filter(Boolean);
 
